@@ -1,2 +1,10 @@
 *.csv
 .idea/
+.vscode/
+__pycache__/
+*.py[cod]
+*.so
+venv/
+.env
+*.log
+*.sqlite3
