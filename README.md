@@ -1,5 +1,5 @@
 # elAPI Plugin Development – SFB 1638 Tools
-This repository contains helper tools and plugin prototypes for extending the [elAPI framework](https://github.com/uhd-urz/elAPI), developed as part of the initiative **SFB 1638** at **Heidelberg University Biochemistry Center (BZH)**
+This repository contains helper tools and plugin prototypes for extending the [elAPI framework](https://github.com/uhd-urz/elAPI), developed as part of the initiative **SFB 1638** at [Heidelberg University Biochemistry Center (BZH)](https://bzh.db-engine.de/)
 
 These tools are designed to simplify resource interaction (e.g. patching metadata) and serve as early building blocks for elAPI plugins.
 
