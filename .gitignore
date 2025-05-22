@@ -8,3 +8,4 @@ venv/
 .env
 *.log
 *.sqlite3
+test_main.py

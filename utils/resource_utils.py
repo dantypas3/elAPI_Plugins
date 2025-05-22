@@ -2,6 +2,8 @@ import re
 from elapi.api import FixedEndpoint
 from elapi.validators import ValidationError, Validator
 from typing import Union
+from pathlib import Path
+
 
 """
 
@@ -40,3 +42,7 @@ class ResourceIDValidator(Validator):
                 self._resource_endpoint.close()
                 raise
         raise ValidationError("Invalid resource_id format.")
+
+def is_file_created_and_not_empty(file_path: str) -> bool:
+    file = Path(file_path)
+    return file.exists() and file.stat().st_size > 0

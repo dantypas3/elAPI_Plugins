@@ -1,7 +1,7 @@
 import pandas as pd
 import json
 import math
-import resource_utils as utils
+from utils import resource_utils as utils
 from pathlib import Path
 from typing import Union
 
