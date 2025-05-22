@@ -54,14 +54,8 @@ class RessourceIDValidator(Validator):
                 raise
         raise ValidationError("Invalid ressource_id format.")
 
-
-def patch_single_resource_from_csv(
-    ressource_id: Union[str, int],
-    input_csv: Union[Path, str],
-    encoding: str = 'utf-8',
-    separator: str = ';'
-):
-    from elapi.api.endpoint import FixedEndpoint
+def patch_single_resource_from_csv(ressource_id: Union[str, int], input_csv: Union[Path, str], encoding: str = 'utf-8',
+                                   separator: str = ';'):
 
     print(f"Validating resource ID: {ressource_id}")
     RessourceIDValidator(ressource_id).validate()
