@@ -1,9 +1,15 @@
-#ressource_utils.py
 import re
 from elapi.api import FixedEndpoint
 from elapi.validators import ValidationError, Validator
-from typing import Union, Optional
+from typing import Union
 
+"""
+
+Created for: Universität Heidelberg – BZH - SFB 1638
+Author: Dionysios Antypas (dionysios.antypas@bzh.uni-heidelberg.de)
+Status: Work in progress
+
+"""
 
 class FixedRessourceEndpoint:
     def __new__(cls, *args, **kwargs):

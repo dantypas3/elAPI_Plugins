@@ -15,12 +15,8 @@ Description:
     - Validates the resource ID
     - Reads a CSV file with exactly one row of update data
     - Updates title, body, and metadata.extra_fields via API PATCH(elAPI) request
-
-Dependencies:
-    - pandas
-    - elapi
-    - Python 3.7+
 """
+
 def patch_single_resource_from_csv(ressource_id: Union[str, int], input_csv: Union[Path, str], encoding: str = 'utf-8',
                                    separator: str = ';'):
 
