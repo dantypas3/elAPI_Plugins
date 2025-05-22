@@ -21,7 +21,7 @@ def patch_single_resource_from_csv(ressource_id: Union[str, int], input_csv: Uni
                                    separator: str = ';'):
 
     print(f"Validating resource ID: {ressource_id}")
-    utils.RessourceIDValidator(ressource_id).validate()
+    utils.ResourceIDValidator(ressource_id).validate()
 
     print(f"Reading CSV: {input_csv}")
     df = pd.read_csv(input_csv, encoding=encoding, sep=separator)
@@ -33,7 +33,7 @@ def patch_single_resource_from_csv(ressource_id: Union[str, int], input_csv: Uni
     df = df.applymap(lambda x: x.item() if hasattr(x, 'item') else x)
     row = df.iloc[0]
 
-    session = utils.FixedRessourceEndpoint()
+    session = utils.FixedResourceEndpoint()
     print(f"Fetching resource {ressource_id} from API...")
     ressource = session.get(endpoint_id=ressource_id).json()
 

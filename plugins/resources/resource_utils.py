@@ -11,32 +11,32 @@ Status: Work in progress
 
 """
 
-class FixedRessourceEndpoint:
+class FixedResourceEndpoint:
     def __new__(cls, *args, **kwargs):
         return FixedEndpoint("items")
 
-class RessourceIDValidator(Validator):
+class ResourceIDValidator(Validator):
     def __init__(self, ressource_id: Union[str, int]):
-        self.ressource_id = ressource_id
-        self._ressource_endpoint = FixedRessourceEndpoint()
+        self.resource_id = ressource_id
+        self._resource_endpoint = FixedResourceEndpoint()
 
     @property
-    def ressource_id(self):
-        return self._ressource_id
+    def resource_id(self):
+        return self._resource_id
 
-    @ressource_id.setter
-    def ressource_id(self, value):
+    @resource_id.setter
+    def resource_id(self, value):
         if value is None:
-            raise ValidationError("Ressource_id cannot be None.")
+            raise ValidationError("Resource_id cannot be None.")
         if not hasattr(value, "__str__"):
-            raise ValidationError("Ressource ID must be convertible to string.")
-        self._ressource_id = str(value)
+            raise ValidationError("Resource ID must be convertible to string.")
+        self._resource_id = str(value)
 
     def validate(self):
-        if re.match(r"^\d+$|^me$", self.ressource_id, re.IGNORECASE):
+        if re.match(r"^\d+$|^me$", self.resource_id, re.IGNORECASE):
             try:
-                return self._ressource_endpoint.get(endpoint_id=self._ressource_id).json()["id"]
+                return self._resource_endpoint.get(endpoint_id=self._resource_id).json()["id"]
             except KeyError:
-                self._ressource_endpoint.close()
+                self._resource_endpoint.close()
                 raise
-        raise ValidationError("Invalid ressource_id format.")
+        raise ValidationError("Invalid resource_id format.")
