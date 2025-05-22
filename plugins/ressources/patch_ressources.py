@@ -4,7 +4,6 @@ import math
 import ressource_utils as utils
 from pathlib import Path
 from typing import Union
-from elapi.api import FixedEndpoint
 
 """
 This script validates and patches resources from a CSV file via a fixed API endpoint.
