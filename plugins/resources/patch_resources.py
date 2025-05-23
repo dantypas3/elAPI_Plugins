@@ -30,7 +30,7 @@ def patch_single_resource_from_csv(ressource_id: Union[str, int], input_csv: Uni
     if len(df) != 1:
         raise ValueError("CSV must contain exactly one data row.")
 
-    df = df.applymap(lambda x: x.item() if hasattr(x, 'item') else x)
+    df = df.map(lambda x: x.item() if hasattr(x, 'item') else x)
     row = df.iloc[0]
 
     session = utils.FixedResourceEndpoint()
