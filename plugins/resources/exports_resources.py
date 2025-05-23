@@ -1,5 +1,6 @@
 from utils import resource_utils
 import json
+import os
 from typing import Union
 from utils import paths
 
@@ -20,10 +21,15 @@ def json_export_resource(resource_id: Union[str, int], export_file =""):
     session = resource_utils.FixedResourceEndpoint()
     resource = session.get(endpoint_id=526).json()
     resource_json = json.dumps(resource, indent=4)
+
     if export_file == "":
         export_file = paths.export_json(f"resouce_{resource_id}.json")
     else:
         export_file = paths.export_json(f"{export_file}.json")
+
+    export_dir = os.path.dirname(export_file)
+    os.makedirs(export_dir, exist_ok=True)
+
     with open(export_file, "w") as json_file:
         json_file.write(resource_json)
 
