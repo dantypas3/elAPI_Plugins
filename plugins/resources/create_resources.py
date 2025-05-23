@@ -14,6 +14,12 @@ Status: Work in progress
 """
 
 def create_resource():
+    """
+    Create resources by using existing categories.
+    The available categories will be displayed and
+    the category number will be given as input by the user.
+    """
+
     session = FixedEndpoint("items_types")
     categories = session.get().json()
     df_categories = pd.json_normalize(categories)
@@ -32,11 +38,8 @@ def create_resource():
     new_resource.post(
         data = {"category_id": RESOURCE_CATEGORY_ID}
     )
+    new_resource_id = new_resource.get().json()[0]["id"]
 
-    patch_resources.patch_single_resource_from_csv(9948, "test_datei.csv", encoding="utf-8", separator=";")
-
-def main():
-    create_resource()
-
-if __name__ == "__main__":
-    main()
+    print(f"Patching resource {new_resource_id}")
+    patch_resources.patch_single_resource_from_csv(new_resource_id, "test_datei.csv", encoding="utf-8",
+                                                   separator=";")
