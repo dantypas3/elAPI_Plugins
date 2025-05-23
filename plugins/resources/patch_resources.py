@@ -56,7 +56,7 @@ def patch_single_resource_from_csv(ressource_id: Union[str, int], input_csv: Uni
             if hasattr(value, 'item'):
                 value = value.item()
             if value is None or (isinstance(value, float) and math.isnan(value)):
-                continue
+                value = ""
             metadata["extra_fields"][field]["value"] = str(value)
             print(f"Field '{field}' updated to: {metadata['extra_fields'][field]['value']}")
         else:
@@ -71,7 +71,6 @@ def patch_single_resource_from_csv(ressource_id: Union[str, int], input_csv: Uni
     print("Sending PATCH request...")
     patch_response = session.patch(endpoint_id=ressource_id, data=payload)
 
-    print("Patch complete")
     if patch_response.status_code == 200:
         print("Patch complete")
     else:
