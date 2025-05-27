@@ -24,9 +24,10 @@ def create_resources(csv_path: Union[Path, str], encoding: str = 'utf-8', separa
     The user selects the category once and it's applied to all new resources.
     """
 
-    session = FixedEndpoint("items_types")
+    session = resource_utils.FixedCategoryEndpoint()
     categories = session.get().json()
     df_categories = pd.json_normalize(categories)
+
 
     print("ID  Title")
     for category in categories:
@@ -60,4 +61,4 @@ def create_resources(csv_path: Union[Path, str], encoding: str = 'utf-8', separa
         else:
             print(f"Row {index} already has a resource_id ({row['resource_id']}). Skipping.")
 
-    print(f"\nAll missing resources created and patched. Final CSV saved to: {csv_path}")
+    print(f"\n All missing resources created and patched. Final CSV saved to: {csv_path}")
