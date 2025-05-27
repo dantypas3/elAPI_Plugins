@@ -1,6 +1,5 @@
 from pathlib import Path
 from typing import Union
-from elapi.api import FixedEndpoint
 from utils import resource_utils
 from plugins.resources import patch_resources
 import pandas as pd
@@ -39,19 +38,19 @@ def create_resources(csv_path: Union[Path, str], encoding: str = 'utf-8', separa
 
     df = pd.read_csv(csv_path, encoding=encoding, sep=separator)
 
-    if "resource_id" not in df.columns:
-        df["resource_id"] = ""
+    if "id" not in df.columns:
+        df["id"] = ""
 
     for index, row in df.iterrows():
-        if not row.get("resource_id"):
+        if not row.get("id"):
             print(f"\n Creating resource for row {index}...")
 
             new_resource = resource_utils.FixedResourceEndpoint()
-            post = new_resource.post(data={"category_id": resource_category_id})
+            post = new_resource.post(data={"id": resource_category_id})
             new_resource_url = post.headers.get("Location")
             new_resource_id = new_resource_url.rstrip("/").split("/")[-1]
 
-            df.at[index, "resource_id"] = new_resource_id
+            df.at[index, "id"] = new_resource_id
             print(f" Resource created with ID {new_resource_id}")
 
             df.to_csv(csv_path, encoding=encoding, sep=separator, index=False)
@@ -59,6 +58,6 @@ def create_resources(csv_path: Union[Path, str], encoding: str = 'utf-8', separa
             patch_resources.patch_resources_from_csv(csv_path, encoding, separator)
 
         else:
-            print(f"Row {index} already has a resource_id ({row['resource_id']}). Skipping.")
+            print(f"Row {index} already has a resource_id ({row['id']}). Skipping.")
 
     print(f"\n All missing resources created and patched. Final CSV saved to: {csv_path}")
