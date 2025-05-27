@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Union
 from elapi.api import FixedEndpoint
 from utils import resource_utils
-import patch_resources
+from plugins.resources import patch_resources
 import pandas as pd
 
 """
@@ -35,10 +35,12 @@ def create_resource():
     RESOURCE_CATEGORY_ID = int(category_df["id"])
     new_resource = resource_utils.FixedResourceEndpoint()
 
-    new_resource.post(
+    post = new_resource.post(
         data = {"category_id": RESOURCE_CATEGORY_ID}
     )
-    new_resource_id = new_resource.get().json()[0]["id"]
+
+    new_resource_url = post.headers.get("Location")
+    new_resource_id = new_resource_url.split("/")[-1]
 
     print(f"Patching resource {new_resource_id}")
     patch_resources.patch_single_resource_from_csv(new_resource_id, "test_datei.csv", encoding="utf-8",
