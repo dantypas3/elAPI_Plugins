@@ -17,6 +17,10 @@ class FixedResourceEndpoint:
     def __new__(cls, *args, **kwargs):
         return FixedEndpoint("items")
 
+class FixedCategoryEndpoint:
+    def __new__(cls, *args, **kwargs):
+        return FixedCategoryEndpoint("items_types")
+
 class ResourceIDValidator(Validator):
     def __init__(self, ressource_id: Union[str, int]):
         self.resource_id = ressource_id
