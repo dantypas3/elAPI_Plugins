@@ -6,18 +6,22 @@ from plugins.resources import patch_resources
 import pandas as pd
 
 """
-
-Created for: Universität Heidelberg – BZH - SFB 1638
-Author: Dionysios Antypas (dionysios.antypas@bzh.uni-heidelberg.de)
+This script creates resources using a fixed API endpoint.
+Created for: Universität Heidelberg – BZH - SFB 1638  
+Author: Dionysios Antypas (dionysios.antypas@bzh.uni-heidelberg.de)  
 Status: Work in progress
 
+Description:
+    - Displays available resource categories
+    - Creates a new resource by selecting a category
+    - Patches the created resource using data from a CSV file
 """
 
-def create_resource():
+def create_resources(csv_path: Union[Path, str], encoding: str = 'utf-8', separator: str = ';'):
     """
-    Create resources by using existing categories.
-    The available categories will be displayed and
-    the category number will be given as input by the user.
+    Create and patch one resource per row in the CSV file.
+    If a row already has a 'resource_id', it will be skipped.
+    The user selects the category once and it's applied to all new resources.
     """
 
     session = FixedEndpoint("items_types")
@@ -26,22 +30,34 @@ def create_resource():
 
     print("ID  Title")
     for category in categories:
-        print(f"{category["id"]}: {category['title']}")
+        print(f"{category['id']}: {category['title']}")
 
-    answer = int(input("Please enter id of the resource category to be used: "))
+    answer = int(input("Please enter the ID of the resource category to be used: "))
     category_df = df_categories[df_categories["id"] == answer]
-    print(category_df)
+    resource_category_id = int(category_df["id"])
 
-    RESOURCE_CATEGORY_ID = int(category_df["id"])
-    new_resource = resource_utils.FixedResourceEndpoint()
+    df = pd.read_csv(csv_path, encoding=encoding, sep=separator)
 
-    post = new_resource.post(
-        data = {"category_id": RESOURCE_CATEGORY_ID}
-    )
+    if "resource_id" not in df.columns:
+        df["resource_id"] = ""
 
-    new_resource_url = post.headers.get("Location")
-    new_resource_id = new_resource_url.split("/")[-1]
+    for index, row in df.iterrows():
+        if not row.get("resource_id"):
+            print(f"\n Creating resource for row {index}...")
 
-    print(f"Patching resource {new_resource_id}")
-    patch_resources.patch_single_resource_from_csv(new_resource_id, "test_datei.csv", encoding="utf-8",
-                                                   separator=";")
+            new_resource = resource_utils.FixedResourceEndpoint()
+            post = new_resource.post(data={"category_id": resource_category_id})
+            new_resource_url = post.headers.get("Location")
+            new_resource_id = new_resource_url.rstrip("/").split("/")[-1]
+
+            df.at[index, "resource_id"] = new_resource_id
+            print(f" Resource created with ID {new_resource_id}")
+
+            df.to_csv(csv_path, encoding=encoding, sep=separator, index=False)
+
+            patch_resources.patch_resources_from_csv(csv_path, encoding, separator)
+
+        else:
+            print(f"Row {index} already has a resource_id ({row['resource_id']}). Skipping.")
+
+    print(f"\nAll missing resources created and patched. Final CSV saved to: {csv_path}")
