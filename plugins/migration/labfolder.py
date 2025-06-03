@@ -1,74 +1,102 @@
-import requests
+from typing import List, Dict, Any, Optional
 from urllib.parse import urljoin
-from typing import List, Dict, Any
+import requests
 
 class Labfolder:
-    """Client for Labfolder v2 API."""
-    def __init__(self, email: str, password: str,
+    def __init__(self, email: Optional[str] = None, password: Optional[str] = None,
                  base_url: str = "https://labfolder.labforward.app/api/v2"):
+        if email is None:
+            print("Email is required")
+        if password is None:
+            print("Password is required")
+
         self.email = email
         self.password = password
         self.base_url = base_url.rstrip("/")
         self._token = None
-
-        self._session = requests.Session()
-        self._session.headers.update({
-            "Content-Type": "application/json",
-            "User-Agent": f"MyLabApp; {self.email}"
-        })
+        self.headers = {
+            "Authorization": None,
+            "Content-Type": "application/json"
+        }
 
     def login(self) -> str:
-        """Authenticate and store bearer token."""
-        url = f"{self.base_url}/login"
-        resp = self._session.post(url, json={"user": self.email, "password": self.password})
+        login_url = urljoin(self.base_url +"/", "auth/login")
+        payload = {
+            "user": self.email,
+            "password": self.password
+        }
+
         try:
+            resp = requests.post(login_url, headers=self.headers, json=payload)
             resp.raise_for_status()
         except requests.HTTPError as e:
             raise RuntimeError(f"Login failed ({resp.status_code}): {resp.text}") from e
-        token = resp.json().get("token")
-        if not token:
-            raise RuntimeError("Login succeeded but no token returned")
-        self._token = token.strip()
-        self._session.headers.update({"Authorization": f"Bearer {self._token}"})
-        return self._token
+
+        self._token = resp.json()["token"].strip()
+        self.headers["Authorization"] = f"Bearer {self._token}"
+        print(self.headers)
+        return resp.json()["token"]
 
     def logout(self) -> None:
-        """Invalidate the current token."""
         if not self._token:
             return
-        url = f"{self.base_url}/auth/logout"
-        self._session.post(url).raise_for_status()
+        logout_url = urljoin(self.base_url +"/", "logout")
+        self.headers["Authorization"] = None
+        requests.post(logout_url).raise_for_status()
         self._token = None
-        self._session.headers.pop("Authorization", None)
 
-    def get_projects(self, limit: int = 100, include_hidden: bool = True
-                     ) -> List[Dict[str, Any]]:
+    def get_projects(self, include_hidden: bool = True) -> List:
         """Fetch all projects, handling pagination."""
-        projects: List[Dict[str, Any]] = []
+        projects = []
+        limit = 100
         offset = 0
+        projects_url = urljoin(self.base_url + "/", "projects")
+
         while True:
-            params = {"limit": limit, "offset": offset, "include_hidden": include_hidden}
-            resp = self._session.get(f"{self.base_url}/projects", params=params)
+            params = {
+                "limit": limit,
+                "offset": offset,
+                "include_hidden": include_hidden}
+            resp = requests.get(projects_url, headers=self.headers, params=params)
             resp.raise_for_status()
+
             data = resp.json()
-            batch = data.get("data", data)
-            if not isinstance(batch, list):
-                raise RuntimeError(f"Unexpected projects format: {data!r}")
-            projects.extend(batch)
-            if len(batch) < limit:
+
+            projects.extend(data)
+
+            if len(data) < limit:
                 break
             offset += limit
+
         return projects
 
     def get_project_entries(self) -> List[Dict[str, Any]]:
         """Fetch all entries across all projects."""
-        entries: List[Dict[str, Any]] = []
-        for proj in self.get_projects():
-            proj_id = proj["id"]
-            resp = self._session.get(f"{self.base_url}/entries", params={"project_ids": proj_id})
+        project_entries = []
+        limit = 50
+        offset = 0
+        ertries_url = urljoin(self.base_url + "/", "entries")
+
+        while True:
+            params = {
+#                "sort": "title creation_date",
+                "limit": limit,
+                "offset": offset,
+            }
+
+            resp = requests.get(ertries_url, headers=self.headers, params=params)
             resp.raise_for_status()
-            entries.extend(resp.json())
-        return entries
+            project_entries.extend(resp.json())
+
+            data = resp.json()
+            print(len(data))
+            print()
+
+            if len(data) < limit:
+                break
+            offset += limit
+
+        return project_entries
 
     def get_entries(self) ->List:
         entries = []
@@ -79,6 +107,7 @@ class Labfolder:
                 entry_url = urljoin(self.base_url, f"entries/{entry_id}")
                 req = requests.get(entry_url, headers=self._session.headers)
                 req_json = req.json()
+
                 print(req_json['id'])
                 entries.append(req_json)
         return entries

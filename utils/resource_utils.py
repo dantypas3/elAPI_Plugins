@@ -6,11 +6,9 @@ from pathlib import Path
 
 
 """
-
 Created for: Universität Heidelberg – BZH - SFB 1638
 Author: Dionysios Antypas (dionysios.antypas@bzh.uni-heidelberg.de)
 Status: Work in progress
-
 """
 
 class FixedResourceEndpoint:
