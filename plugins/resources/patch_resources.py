@@ -122,7 +122,7 @@ def patch_resources_from_csv(csv_path: Union[Path, str], encoding: str = 'utf-8'
             "userid": int(resource.get("userid")),
            # "lastchangeby": resource.get("lastchangeby"),
             "is_bookable": resource.get("is_bookable"),
-            "status": resource.get("status"),
+            "status_title": resource.get("status"),
             "metadata": json.dumps(metadata)
         }
 
