@@ -175,10 +175,8 @@ class Labfolder:
                         for chunk in img_resp.iter_content(chunk_size=8192):
                             f.write(chunk)
 
-                    # Step 1: Open base image
                     base_img = Image.open(image_path).convert("RGBA")
 
-                    # Step 2: Convert SVG annotation to PNG using cairosvg
                     svg_data = metadata.get("annotation_layer_svg")
                     if svg_data:
                         png_bytes = cairosvg.svg2png(bytestring=svg_data.encode("utf-8"),
@@ -186,10 +184,8 @@ class Labfolder:
                                                      output_height=base_img.height)
                         overlay = Image.open(BytesIO(png_bytes)).convert("RGBA")
 
-                        # Step 3: Combine base image + annotation overlay
                         combined = Image.alpha_composite(base_img, overlay)
 
-                        # Step 4: Save final result
                         output_path = image_path.with_stem(f"{image_path.stem}_with_annotations")
                         combined.save(output_path)
 
