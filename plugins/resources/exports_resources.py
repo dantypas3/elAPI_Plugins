@@ -19,7 +19,7 @@ def json_export_resource(resource_id: Union[str, int], export_file =""):
 
     print(f"Fetching resource {resource_id} from API...")
     session = resource_utils.FixedResourceEndpoint()
-    resource = session.get(endpoint_id=526).json()
+    resource = session.get(endpoint_id=resource_id).json()
     resource_json = json.dumps(resource, indent=4)
 
     if export_file == "":
