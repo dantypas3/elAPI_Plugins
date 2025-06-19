@@ -1,23 +1,23 @@
-from utils import resource_utils
 from typing import Union
-from utils import paths
-from datetime import datetime
 from pathlib import Path
+from datetime import datetime
 import json
 import os
 import logging
+
 import pandas as pd
+from werkzeug.utils import secure_filename
+
+from utils import resource_utils
+from utils import paths
 
 """
-
 Created for: Universität Heidelberg – BZH - SFB 1638
-Author: Dionysios Antypas (dionysios.antypas@bzh.uni-heidelberg.de)
-Status: Work in progress
-
+Author:    Dionysios Antypas (dionysios.antypas@bzh.uni-heidelberg.de)
+Status:    Work in progress
 """
 
-def json_export_resource(resource_id: Union[str, int], export_file =""):
-
+def json_export_resource(resource_id: Union[str, int], export_file: str = "") -> str:
     print(f"Validating resource ID: {resource_id}")
     resource_utils.ResourceIDValidator(resource_id).validate()
 
@@ -26,42 +26,35 @@ def json_export_resource(resource_id: Union[str, int], export_file =""):
     resource = session.get(endpoint_id=resource_id).json()
     resource_json = json.dumps(resource, indent=4)
 
-    if export_file == "":
-        export_file = paths.export_json(f"resouce_{resource_id}.json")
+    if not export_file:
+        export_file = paths.export_json(f"resource_{resource_id}.json")
     else:
-        export_file = paths.export_json(f"{export_file}.json")
+        safe_name = secure_filename(export_file)
+        export_file = paths.export_json(f"{safe_name}.json")
 
     export_dir = os.path.dirname(export_file)
     os.makedirs(export_dir, exist_ok=True)
 
-    with open(export_file, "w") as json_file:
-        json_file.write(resource_json)
+    with open(export_file, "w") as f:
+        f.write(resource_json)
 
     if not resource_utils.is_file_created_and_not_empty(export_file):
         raise IOError("The output JSON file is empty or could not be written correctly.")
 
     print(f"Exported to: {export_file}")
-
     return resource_json
 
-def export_category_to_xlsx(category_id: int, export_file: str | None = None) -> Path:
-    """Export all resources of a category to an XLSX file.
 
-    Parameters
-    ----------
-    category_id: int
-        ID of the category to export.
-    export_file: str | None
-        Optional name of the output file. ``.xlsx`` will be appended if needed.
-
-    Returns
-    -------
-    Path
-        Path to the created XLSX file.
+def export_category_to_xlsx(
+    category_id: int,
+    export_file: Union[str, None] = None
+) -> Path:
     """
-
-    resources_json = resource_utils.FixedResourceEndpoint().get(query={'cat': category_id}).json()
-    df = pd.json_normalize(resources_json)
+    Export all resources of a category to an XLSX file.
+    Returns the absolute Path to the created file.
+    """
+    resources = resource_utils.FixedResourceEndpoint().get(query={'cat': category_id}).json()
+    df = pd.json_normalize(resources)
 
     cols_to_drop = [
         "team", "elabid", "category", "locked", "lockedby", "locked_at",
@@ -89,26 +82,25 @@ def export_category_to_xlsx(category_id: int, export_file: str | None = None) ->
     df_final = pd.concat([df_clean, df_extra], axis=1)
 
     if export_file:
-        if "." in export_file:
-            base = export_file.split(".")[0]
-            export_file = base + ".xlsx"
-            out_path = Path(export_file)
-        else:
-            out_path = Path(export_file).with_suffix(".xlsx")
-
+        safe_name = secure_filename(export_file)
+        if not safe_name.lower().endswith(".xlsx"):
+            safe_name += ".xlsx"
+        out_path = Path.cwd() / safe_name
     else:
         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-        out_path = Path(f"category_{category_id}_{ts}.xlsx")
+        filename = f"category_{category_id}_{ts}.xlsx"
+        out_path = Path.cwd() / filename
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
 
     df_final.to_excel(out_path, index=False)
-    print(f"\n Exported {len(df_final)} resources to {out_path.resolve()}")
-    return out_path
+    print(f"\nExported {len(df_final)} resources to {out_path.resolve()}")
 
+    return out_path.resolve()
 
-def export_xlsx(export_file: str = None) -> Path:
-
-    categories = resource_utils.FixedCategoryEndpoint().get().json()
-
+def export_xlsx(export_file: Union[str, None] = None) -> Path:
+    """CLI helper: let the user pick a category and then call export_category_to_xlsx."""
+    categories = resource_utils.FixedResourceEndpoint().get().json()
     df_categories = pd.json_normalize(categories)
 
     print("ID  Title")
