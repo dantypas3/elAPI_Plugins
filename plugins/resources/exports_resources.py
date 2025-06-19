@@ -37,8 +37,6 @@ def json_export_resource(resource_id: Union[str, int], export_file =""):
     with open(export_file, "w") as json_file:
         json_file.write(resource_json)
 
-
-
     if not resource_utils.is_file_created_and_not_empty(export_file):
         raise IOError("The output JSON file is empty or could not be written correctly.")
 
@@ -46,7 +44,7 @@ def json_export_resource(resource_id: Union[str, int], export_file =""):
 
     return resource_json
 
-def export_xlsx(export_file : Union[str, int] = None) -> Path:
+def export_xlsx(export_file : str = None) -> Path:
 
     categories = resource_utils.FixedCategoryEndpoint().get().json()
 
@@ -98,11 +96,17 @@ def export_xlsx(export_file : Union[str, int] = None) -> Path:
     df_final = pd.concat([df_clean, df_extra], axis=1)
 
     if export_file:
-        out_path = Path(export_file)
+        if "." in export_file:
+            base = export_file.split(".")[0]
+            export_file = base+".xlsx"
+            out_path = Path(export_file)
+        else:
+            out_path = Path(export_file).with_suffix(".xlsx")
+
     else:
         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
         out_path = Path(f"category_{choice}_{ts}.xlsx")
 
     df_final.to_excel(out_path, index=False)
-    print(f"\n✅ Exported {len(df_final)} resources to {out_path.resolve()}")
+    print(f"\n Exported {len(df_final)} resources to {out_path.resolve()}")
     return out_path
