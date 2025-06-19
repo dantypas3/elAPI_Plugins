@@ -44,30 +44,23 @@ def json_export_resource(resource_id: Union[str, int], export_file =""):
 
     return resource_json
 
-def export_xlsx(export_file : str = None) -> Path:
+def export_category_to_xlsx(category_id: int, export_file: str | None = None) -> Path:
+    """Export all resources of a category to an XLSX file.
 
-    categories = resource_utils.FixedCategoryEndpoint().get().json()
+    Parameters
+    ----------
+    category_id: int
+        ID of the category to export.
+    export_file: str | None
+        Optional name of the output file. ``.xlsx`` will be appended if needed.
 
-    df_categories = pd.json_normalize(categories)
+    Returns
+    -------
+    Path
+        Path to the created XLSX file.
+    """
 
-    print("ID  Title")
-    for cat_id, title in zip(df_categories['id'], df_categories['title']):
-        print(f"{cat_id:<4} {title}")
-
-    valid_ids = set(df_categories['id'])
-    max_attempts = 5
-    for attempt in range(1, max_attempts + 1):
-        try:
-            choice = int(input("\nSelect a category id: ").strip())
-            if choice in valid_ids:
-                break
-            logging.warning("Invalid category id: %s", choice)
-        except ValueError:
-            logging.warning("Non-integer input received.")
-        if attempt == max_attempts:
-            raise SystemExit("Too many invalid attempts. Exiting.")
-
-    resources_json = resource_utils.FixedResourceEndpoint().get(query={'cat': choice}).json()
+    resources_json = resource_utils.FixedResourceEndpoint().get(query={'cat': category_id}).json()
     df = pd.json_normalize(resources_json)
 
     cols_to_drop = [
@@ -98,15 +91,41 @@ def export_xlsx(export_file : str = None) -> Path:
     if export_file:
         if "." in export_file:
             base = export_file.split(".")[0]
-            export_file = base+".xlsx"
+            export_file = base + ".xlsx"
             out_path = Path(export_file)
         else:
             out_path = Path(export_file).with_suffix(".xlsx")
 
     else:
         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-        out_path = Path(f"category_{choice}_{ts}.xlsx")
+        out_path = Path(f"category_{category_id}_{ts}.xlsx")
 
     df_final.to_excel(out_path, index=False)
     print(f"\n Exported {len(df_final)} resources to {out_path.resolve()}")
     return out_path
+
+
+def export_xlsx(export_file: str = None) -> Path:
+
+    categories = resource_utils.FixedCategoryEndpoint().get().json()
+
+    df_categories = pd.json_normalize(categories)
+
+    print("ID  Title")
+    for cat_id, title in zip(df_categories['id'], df_categories['title']):
+        print(f"{cat_id:<4} {title}")
+
+    valid_ids = set(df_categories['id'])
+    max_attempts = 5
+    for attempt in range(1, max_attempts + 1):
+        try:
+            choice = int(input("\nSelect a category id: ").strip())
+            if choice in valid_ids:
+                break
+            logging.warning("Invalid category id: %s", choice)
+        except ValueError:
+            logging.warning("Non-integer input received.")
+        if attempt == max_attempts:
+            raise SystemExit("Too many invalid attempts. Exiting.")
+
+    return export_category_to_xlsx(choice, export_file)
