@@ -1,0 +1,5 @@
+cairosvg==2.8.2
+elapi==2.3.3
+pandas==2.3.0
+Pillow==11.2.1
+Requests==2.32.4
