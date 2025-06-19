@@ -1,5 +1,9 @@
 from flask import Flask, render_template_string, request, send_file
 from pathlib import Path
+import threading
+import time
+import webbrowser
+
 from .exports_resources import export_category_to_xlsx
 from utils import resource_utils
 
@@ -33,5 +37,14 @@ def index():
         return send_file(out_path, as_attachment=True)
     return render_template_string(FORM_TEMPLATE, categories=categories)
 
+
+def _open_browser():
+    """Wait a sec for the server to start, then open the browser."""
+    time.sleep(1)
+    webbrowser.open('http://127.0.0.1:5000/')
+
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    threading.Thread(target=_open_browser, daemon=True).start()
+
+    app.run(debug=True, use_reloader=False)
