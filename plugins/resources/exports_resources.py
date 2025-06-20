@@ -6,6 +6,7 @@ import os
 import logging
 
 import pandas as pd
+import openpyxl
 from werkzeug.utils import secure_filename
 
 from utils import resource_utils
