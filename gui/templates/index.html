@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Export Resources</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="container">
+    <div style="text-align: center; margin-bottom: 20px;">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="SFB1638 Logo" width="100">
+    </div>
+    <h1>Export Elab Resources to XLSX</h1>
+    <form method="post">
+        <label for="category">Category:</label>
+        <select name="category" id="category">
+            {% for cat in categories %}
+            <option value="{{ cat['id'] }}">{{ cat['title'] }}</option>
+            {% endfor %}
+        </select>
+
+        <label for="filename">File name (optional):</label>
+        <input type="text" id="filename" name="filename">
+
+        <button type="submit">Export</button>
+    </form>
+</div>
+
+<footer class="site-footer">
+    <p>
+        Created for:
+        <a href="https://bzh.db-engine.de/" target="_blank">
+            Heidelberg University, Biochemistry Center
+        </a>, SFB 1638
+    </p>
+    <p>
+        Built by:
+        <a href="https://github.com/dantypas3" target="_blank">D. Antypas</a>
+    </p>
+</footer>
+
+<script>
+    window.addEventListener('unload', () => {
+        navigator.sendBeacon('/shutdown');
+    });
+</script>
+</body>
+</html>
