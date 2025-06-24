@@ -1,17 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$PROJECT_ROOT"
+cd "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 PY=python3
-if ! command -v $PY &>/dev/null; then
+if ! command -v "$PY" &>/dev/null; then
   PY=python
 fi
 
-if [ ! -d "venv" ]; then
+if [ ! -d venv ]; then
   echo "Creating virtualenv…"
-  $PY -m venv venv
+  "$PY" -m venv venv
   source venv/bin/activate
   echo "Installing dependencies…"
   if [ -f requirements.txt ]; then
