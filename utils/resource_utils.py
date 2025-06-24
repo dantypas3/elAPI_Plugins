@@ -20,8 +20,8 @@ class FixedCategoryEndpoint:
         return FixedEndpoint("items_types")
 
 class ResourceIDValidator(Validator):
-    def __init__(self, ressource_id: Union[str, int]):
-        self.resource_id = ressource_id
+    def __init__(self, resource_id: Union[str, int]):
+        self.resource_id = resource_id
         self._resource_endpoint = FixedResourceEndpoint()
 
     @property
