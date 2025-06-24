@@ -67,25 +67,18 @@ def patch_resources_from_csv(csv_path: Union[Path, str], encoding: str = 'utf-8'
         if "category" in df.columns:
             print(f"Updating category to: {row['category']}")
             resource["category"] = row["category"]
-        # if "locked" in df.columns:
-        #     print(f"Updating locked to: {row['locked']}")
-        #     resource["locked"] = row["locked"]
         if "userid" in df.columns:
             print(f"Updating userid to: {row['userid']}")
             resource["userid"] = row["userid"]
-        # if "lastchangeby" in df.columns:
-        #     print(f"Updating lastchangeby to: {row['lastchangeby']}")
-        #     resource["lastchangeby"] = row["lastchangeby"]
         if "is_bookable" in df.columns:
             print(f"Updating is_bookable to: {row['is_bookable']}")
             resource["is_bookable"] = row["is_bookable"]
-        if "status" in df.columns:
-            print(f"Updating status to: {row['status']}")
-            resource["status"] = str(row["status"])
+#        if "status" in df.columns:
+#            print(f"Updating status to: {row['status']}")
+#            resource["status"] = str(row["status"])
         if "body" in df.columns:
             print(f"Updating body to: {row['body']}")
             resource["body"] = row["body"]
-        #TODO locked
 
         raw_metadata = resource.get("metadata")
         metadata = json.loads(raw_metadata) if isinstance(raw_metadata, str) else raw_metadata
@@ -94,44 +87,33 @@ def patch_resources_from_csv(csv_path: Union[Path, str], encoding: str = 'utf-8'
             metadata["extra_fields"] = json.loads(metadata["extra_fields"])
 
         extra_fields = metadata.get("extra_fields", {})
-        known_fields = {"resource_id", "title", "body"}
-        unexpected_columns = [col for col in df.columns if col not in extra_fields and col not in known_fields]
-
-        if unexpected_columns:
-            warnings.warn(f"Unexpected columns in CSV not found in metadata['extra_fields']: {unexpected_columns}")
-
+        unexpected = [c for c in df.columns if c not in extra_fields and c not in {"resource_id","title","body"}]
+        if unexpected:
+            warnings.warn(f"Unexpected columns: {unexpected}")
         for field in extra_fields:
             if field in df.columns:
-                value = row[field]
-                if hasattr(value, 'item'):
-                    value = value.item()
-                if value is None or (isinstance(value, float) and math.isnan(value)):
-                    value = ""
-                metadata["extra_fields"][field]["value"] = str(value)
-                print(f"Field '{field}' updated to: {metadata['extra_fields'][field]['value']}")
-            else:
-                print(f"Field '{field}' not found in CSV. Skipping.")
+                v = row[field]
+                if hasattr(v, 'item'):
+                    v = v.item()
+                if v is None or (isinstance(v, float) and math.isnan(v)):
+                    v = ""
+                metadata["extra_fields"][field]["value"] = str(v)
 
         payload = {
-            "title": resource.get("title"),
-            "body": resource.get("body"),
-            "date": resource.get("date"),
-            "rating": resource.get("rating"),
-            "category": resource.get("category"),
-        #    "locked": resource.get("locked"),
-            "userid": int(resource.get("userid")),
-           # "lastchangeby": resource.get("lastchangeby"),
-            "is_bookable": resource.get("is_bookable"),
-            "status": resource.get("status"),
-            "metadata": json.dumps(metadata)
+            "title":        resource.get("title"),
+            "body":         resource.get("body"),
+            "date":         resource.get("date"),
+            "rating":       resource.get("rating"),
+            "category":     resource.get("category"),
+            "action":       "lock",
+            "locked":       resource.get("locked"),
+            "userid":       int(resource.get("userid")),
+            "is_bookable":  resource.get("is_bookable"),
+            "metadata":     json.dumps(metadata)
         }
 
-        print("Sending PATCH request...")
-        patch_response = session.patch(endpoint_id=row['id'], data=payload)
-
-        if patch_response.status_code == 200:
-            print(f"Patch of resource {row['id']} complete")
+        resp = session.patch(endpoint_id=row['id'], data=payload)
+        if resp.status_code == 200:
+            print(f"Patched resource {row['id']}")
         else:
-            print(f"Failed to patch resource {row['id']}.\n"
-                  f"Status code: {patch_response.status_code}\n",
-                  f"Response: {patch_response.text}")
+            print(f"Failed {row['id']}: {resp.status_code} {resp.text}")

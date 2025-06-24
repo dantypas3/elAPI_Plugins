@@ -6,11 +6,9 @@ from pathlib import Path
 
 
 """
-
 Created for: Universität Heidelberg – BZH - SFB 1638
 Author: Dionysios Antypas (dionysios.antypas@bzh.uni-heidelberg.de)
 Status: Work in progress
-
 """
 
 class FixedResourceEndpoint:
@@ -19,7 +17,6 @@ class FixedResourceEndpoint:
 
 class FixedCategoryEndpoint:
     def __new__(cls, *args, **kwargs):
-        """Return a fixed endpoint for accessing item categories."""
         return FixedEndpoint("items_types")
 
 class ResourceIDValidator(Validator):

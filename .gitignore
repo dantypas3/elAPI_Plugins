@@ -9,3 +9,4 @@ venv/
 *.log
 *.sqlite3
 test_main.py
+docs/
