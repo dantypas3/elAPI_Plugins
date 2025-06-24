@@ -1,15 +1,16 @@
 from typing import Union
 from pathlib import Path
 from datetime import datetime
+from werkzeug.utils import secure_filename
+from bs4 import BeautifulSoup
+
 import json
 import os
 import logging
-
 import pandas as pd
 import openpyxl
-from werkzeug.utils import secure_filename
 
-from utils import resource_utils
+import utils.resource_utils as resource_utils
 from utils import paths
 
 """
@@ -17,6 +18,27 @@ Created for: Universität Heidelberg – BZH - SFB 1638
 Author:    Dionysios Antypas (dionysios.antypas@bzh.uni-heidelberg.de)
 Status:    Work in progress
 """
+
+
+def strip_html(html_str: str) -> str:
+    """
+    Convert HTML into plain text:
+     - each <p>…</p> becomes one paragraph (joined with double newlines)
+     - inside a paragraph, tags are replaced by single spaces
+    """
+    soup = BeautifulSoup(html_str or "", "html.parser")
+
+    paragraphs = soup.find_all("p")
+    if paragraphs:
+        texts = [
+            p.get_text(separator=" ", strip=True)
+            for p in paragraphs
+        ]
+        return "\n\n".join(texts)
+
+    return soup.get_text(separator=" ", strip=True)
+
+
 
 def json_export_resource(resource_id: Union[str, int], export_file: str = "") -> str:
     print(f"Validating resource ID: {resource_id}")
@@ -54,7 +76,9 @@ def export_category_to_xlsx(
     Export all resources of a category to an XLSX file.
     Returns the absolute Path to the created file.
     """
-    resources = resource_utils.FixedResourceEndpoint().get(query={'cat': category_id}).json()
+    resources = resource_utils.FixedResourceEndpoint()\
+                              .get(query={"cat": category_id})\
+                              .json()
     df = pd.json_normalize(resources)
 
     cols_to_drop = [
@@ -82,22 +106,22 @@ def export_category_to_xlsx(
 
     df_final = pd.concat([df_clean, df_extra], axis=1)
 
+    if "body" in df_final.columns:
+        df_final["body"] = df_final["body"].fillna("").apply(strip_html)
+
     if export_file:
-        safe_name = secure_filename(export_file)
-        if not safe_name.lower().endswith(".xlsx"):
-            safe_name += ".xlsx"
-        out_path = Path.cwd() / safe_name
+        fn = secure_filename(export_file)
+        if not fn.lower().endswith(".xlsx"):
+            fn += ".xlsx"
+        out_path = Path.cwd() / fn
     else:
         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"category_{category_id}_{ts}.xlsx"
-        out_path = Path.cwd() / filename
+        out_path = Path.cwd() / f"category_{category_id}_{ts}.xlsx"
 
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-
+    out_path.parent.mkdir(exist_ok=True, parents=True)
     df_final.to_excel(out_path, index=False)
-    print(f"\nExported {len(df_final)} resources to {out_path.resolve()}")
-
-    return out_path.resolve()
+    print(f"Exported {len(df_final)} rows to {out_path}")
+    return out_path
 
 def export_xlsx(export_file: Union[str, None] = None) -> Path:
     """CLI helper: let the user pick a category and then call export_category_to_xlsx."""

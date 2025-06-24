@@ -103,11 +103,12 @@ FORM_TEMPLATE = """
     <h1>Export Elab Resources to XLSX</h1>
     <form method="post">
       <label for="category">Category:</label>
-      <select name="category" id="category">
-      {% for cat in categories %}
-        <option value="{{ cat['id'] }}">{{ cat['title'] }}</option>
-      {% endfor %}
-      </select>
+        <select name="category" id="category">
+          {# sort by the 'title' attribute #}
+          {% for cat in categories|sort(attribute='title') %}
+            <option value="{{ cat['id'] }}">{{ cat['title'] }}</option>
+          {% endfor %}
+        </select>
 
       <label for="filename">File name (optional):</label>
       <input type="text" id="filename" name="filename">
@@ -135,6 +136,7 @@ FORM_TEMPLATE = """
 @app.route('/', methods=['GET', 'POST'])
 def index():
     categories = resource_utils.FixedCategoryEndpoint().get().json()
+    categories = sorted(categories, key=lambda c: c.get('title', '').lower())
     if request.method == 'POST':
         category_id = int(request.form['category'])
         filename = request.form.get('filename') or None
