@@ -5,17 +5,35 @@ These tools are designed to simplify resource interaction (e.g. patching metadat
 
 These tools are built on top of the official elAPI framework.
 
-⚠️ Important: Make sure to follow the elAPI installation guide to configure your environment correctly before using these tools:
-
-    https://github.com/uhd-urz/elAPI?tab=readme-ov-file#installation
+### Prerequisites
+* [elAPI](https://github.com/uhd-urz/elAPI?tab=readme-ov-file#installation) should be installed and initialised with
+a valid elabFTW API key. Make sure to follow the elAPI [installation guide](https://github.com/uhd-urz/elAPI?tab=readme-ov-file#installation)
+to configure your environment correctly before using these tools.    
 
 
 ### Important Points
 * These tools rely on the external “elAPI” library. Installing that library and configuring API credentials
 (as described in the upstream elAPI README) is required before these scripts can function.
-* The utilities under utils/ wrap elAPI’s endpoints and provide validation helpers. Scripts in plugins/resources/ depend on these utilities.
+* The utilities under utils/ wrap elAPI’s endpoints and provide validation helpers. Scripts in plugins/resources/ depend
+on these utilities.
 * Files lack trailing newlines (the shell prompt appears after the last line when viewing them), but the code itself is intact.
-* There are no tests or entry-point scripts; each module exposes functions (e.g., create_resources, patch_resources_from_csv) that can be imported or run from a small driver script.
+* There are no tests or entry-point scripts; each module exposes functions (e.g., create_resources, patch_resources_from_csv)
+that can be imported or run from a small driver script.
+
+### Running the export GUI
+The repository provides helper scripts for starting `plugins.resources.export_gui` in a fresh
+virtual environment. Ensure Python 3.12 or later is installed and that elAPI is configured as
+described in the prerequisites above.
+
+#### macOS / Linux
+
+Run `./run_export.command` from the repository root. The script creates a `venv` directory,
+installs `requirements.txt`, and then launches `plugins.resources.export_gui`.
+
+#### Windows
+
+Run `run_export.bat` from a Command Prompt. It performs the same setup steps and launches the
+export GUI
 
 ### Where to go next
 
