@@ -22,4 +22,4 @@ else
   source venv/bin/activate
 fi
 
-python -m plugins.resources.export_gui
+python -m gui.export_gui

@@ -37,6 +37,6 @@ if exist requirements.txt (
 )
 
 echo Running export_gui
-python -m plugins.resources.export_gui
+python -m gui.gui
 
 exit
