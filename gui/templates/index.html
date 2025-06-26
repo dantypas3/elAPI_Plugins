@@ -78,5 +78,31 @@
         <a href="https://github.com/dantypas3" target="_blank">D. Antypas</a>
     </p>
 </footer>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const tabCat     = document.getElementById('tab-cat');
+    const tabExp     = document.getElementById('tab-exp');
+    const contentCat = document.getElementById('content-cat');
+    const contentExp = document.getElementById('content-exp');
+
+    tabCat.addEventListener('click', () => {
+        tabCat.classList.add('active');
+        tabExp.classList.remove('active');
+        contentCat.classList.add('active');
+        contentExp.classList.remove('active');
+    });
+
+    tabExp.addEventListener('click', () => {
+        tabExp.classList.add('active');
+        tabCat.classList.remove('active');
+        contentExp.classList.add('active');
+        contentCat.classList.remove('active');
+    });
+
+    window.addEventListener('unload', () => {
+        navigator.sendBeacon('/shutdown');
+    });
+});
+</script>
 </body>
 </html>
