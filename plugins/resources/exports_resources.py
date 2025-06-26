@@ -9,6 +9,8 @@ import os
 import logging
 import pandas as pd
 import openpyxl
+from elapi.api import FixedEndpoint
+
 
 import utils.resource_utils as resource_utils
 from utils import paths
@@ -123,26 +125,39 @@ def export_category_to_xlsx(
     print(f"Exported {len(df_final)} rows to {out_path}")
     return out_path
 
-def export_xlsx(export_file: Union[str, None] = None) -> Path:
-    """CLI helper: let the user pick a category and then call export_category_to_xlsx."""
-    categories = resource_utils.FixedResourceEndpoint().get().json()
-    df_categories = pd.json_normalize(categories)
+def export_experiments_to_xlsx(export_file: Union[str, None] = None) -> Path:
+    session = FixedEndpoint("experiments")
+    df = pd.json_normalize(session.get().json())
+    cols_to_drop = ['userid', 'created_at', 'state', 'content_type', 'access_key', 'custom_id', 'page', 'type',
+                 'status_color', 'category', 'category_color', 'has_comment', 'tags_id', 'events_start',
+                 'events_start_itemid', 'firstname', 'lastname', 'orcid', 'up_item_id', 'status', 'locked_at', 'locked',
+                 'timestamped', 'team']
 
-    print("ID  Title")
-    for cat_id, title in zip(df_categories['id'], df_categories['title']):
-        print(f"{cat_id:<4} {title}")
+    df_clean = df.drop(columns=cols_to_drop + ["metadata"], errors='ignore')
 
-    valid_ids = set(df_categories['id'])
-    max_attempts = 5
-    for attempt in range(1, max_attempts + 1):
-        try:
-            choice = int(input("\nSelect a category id: ").strip())
-            if choice in valid_ids:
-                break
-            logging.warning("Invalid category id: %s", choice)
-        except ValueError:
-            logging.warning("Non-integer input received.")
-        if attempt == max_attempts:
-            raise SystemExit("Too many invalid attempts. Exiting.")
+    extra = []
+    for meta_str in df.get("metadata", []):
+        data = json.loads(meta_str or "{}")
+        fields = data.get("extra_fields", {})
+        flat = {k: v.get("value") for k, v in fields.items() if isinstance(v, dict)}
+        extra.append(flat)
+    df_extra = pd.DataFrame(extra, index=df_clean.index)
 
-    return export_category_to_xlsx(choice, export_file)
+    df_final = pd.concat([df_clean, df_extra], axis=1)
+
+    if "body" in df_final.columns:
+        df_final["body"] = df_final["body"].fillna("").apply(strip_html)
+
+    if export_file:
+        fn = secure_filename(export_file)
+        if not fn.lower().endswith(".xlsx"):
+            fn += ".xlsx"
+        out_path = Path.cwd() / fn
+    else:
+        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+        out_path = Path.cwd() / f"experiments_export_{ts}.xlsx"
+
+    out_path.parent.mkdir(exist_ok=True, parents=True)
+    df_final.to_excel(out_path, index=False)
+    print(f"Exported {len(df_final)} rows to {out_path}")
+    return out_path

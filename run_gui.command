@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/zsh
 set -euo pipefail
 
 cd "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

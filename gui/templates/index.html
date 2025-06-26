@@ -5,26 +5,65 @@
     <title>Export Resources</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        /* Simple tab styling */
+        .tabs { display: flex; margin-bottom: 20px; }
+        .tab-button {
+            flex: 1;
+            padding: 10px;
+            cursor: pointer;
+            background: #f1f1f1;
+            border: 1px solid #ccc;
+            text-align: center;
+        }
+        .tab-button.active {
+            background: #fff;
+            border-bottom: none;
+            font-weight: bold;
+        }
+        .tab-content > div { display: none; }
+        .tab-content > div.active { display: block; }
+    </style>
 </head>
 <body>
 <div class="container">
     <div style="text-align: center; margin-bottom: 20px;">
         <img src="{{ url_for('static', filename='logo.png') }}" alt="SFB1638 Logo" width="100">
     </div>
-    <h1>Export eLabFTW Resources to XLSX</h1>
-    <form method="post">
-        <label for="category">Category:</label>
-        <select name="category" id="category">
-            {% for cat in categories %}
-            <option value="{{ cat['id'] }}">{{ cat['title'] }}</option>
-            {% endfor %}
-        </select>
+    <h1>Export eLabFTW Data to XLSX</h1>
 
-        <label for="filename">File name (optional):</label>
-        <input type="text" id="filename" name="filename">
+    <div class="tabs">
+        <div id="tab-cat" class="tab-button active">Resources</div>
+        <div id="tab-exp" class="tab-button">Experiments</div>
+    </div>
+    <div class="tab-content">
+        <div id="content-cat" class="active">
+            <form method="post">
+                <input type="hidden" name="export_type" value="category">
+                <label for="category">Category:</label>
+                <select name="category" id="category">
+                    {% for cat in categories %}
+                    <option value="{{ cat['id'] }}">{{ cat['title'] }}</option>
+                    {% endfor %}
+                </select>
 
-        <button type="submit">Export</button>
-    </form>
+                <label for="filename">File name (optional):</label>
+                <input type="text" id="filename" name="filename">
+
+                <button type="submit">Export Resources</button>
+            </form>
+        </div>
+
+        <div id="content-exp">
+            <form method="post">
+                <input type="hidden" name="export_type" value="experiments">
+                <label for="exp_filename">File name (optional):</label>
+                <input type="text" id="exp_filename" name="exp_filename">
+
+                <button type="submit">Export Experiments</button>
+            </form>
+        </div>
+    </div>
 </div>
 
 <footer class="site-footer">
@@ -39,11 +78,5 @@
         <a href="https://github.com/dantypas3" target="_blank">D. Antypas</a>
     </p>
 </footer>
-
-<script>
-    window.addEventListener('unload', () => {
-        navigator.sendBeacon('/shutdown');
-    });
-</script>
 </body>
 </html>

@@ -13,6 +13,8 @@ if SCRIPT_DIR not in sys.path:
     sys.path.insert(0, SCRIPT_DIR)
 
 from plugins.resources.exports_resources import export_category_to_xlsx
+from plugins.resources.exports_resources import export_experiments_to_xlsx
+
 from utils import resource_utils
 
 app = Flask(__name__)
@@ -23,9 +25,20 @@ def index():
     categories = sorted(categories, key=lambda c: c.get('title', '').lower())
 
     if request.method == 'POST':
-        category_id = int(request.form['category'])
-        filename = request.form.get('filename') or None
-        out_path = export_category_to_xlsx(category_id, filename)
+
+        export_type = request.form.get('export_type')
+
+        if export_type == 'category':
+            category_id = int(request.form['category'])
+            filename = request.form.get('filename') or None
+            out_path = export_category_to_xlsx(category_id, filename)
+            return send_file(out_path, as_attachment=True)
+        elif export_type == 'experiments':
+            filename = request.form.get('exp_filename') or None
+            out_path  = export_experiments_to_xlsx(filename)
+        else:
+            return "Unknown export type", 400
+
         return send_file(out_path, as_attachment=True)
 
     return render_template('index.html', categories=categories)

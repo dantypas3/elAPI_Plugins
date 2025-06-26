@@ -1,14 +1,115 @@
-body { font-family: 'Roboto', sans-serif; background: #f4f7f8; color: #333; margin:0; padding:2rem 2rem 4rem; }
-.container { background:white; max-width:500px; margin:0 auto; padding:1.5rem; border-radius:8px;
-    box-shadow:0 2px 8px rgba(0,0,0,0.1); }
-h1 { font-size:1.8rem; margin-bottom:1rem; color:#0066cc; text-align:center; }
-label { display:block; margin-top:1rem; font-weight:bold; }
-select, input[type="text"] { width:100%; padding:0.5rem; margin-top:0.3rem; border:1px solid #ccc; border-radius:4px; }
-button { margin-top:1.2rem; padding:0.6rem 1.2rem; background:#28a745; color:white; border:none; border-radius:4px;
-    cursor:pointer; font-size:1rem; }
-button:hover { background:#218838; }
-.site-footer { position:fixed; bottom:0; left:0; width:100%; background:#f1f1f1; padding:0.5rem 1rem; font-size:0.85rem;
-    color:#666; text-align:left; box-shadow:0 -1px 4px rgba(0,0,0,0.1); }
-.site-footer p { margin:0.2rem 0; }
-.site-footer a { color:#0066cc; text-decoration:none; }
-.site-footer a:hover { text-decoration:underline; }
+body {
+    font-family: 'Roboto', sans-serif;
+    background: #f4f7f8;
+    color: #333;
+    margin: 0;
+    padding: 2rem 2rem 4rem;
+}
+
+.container {
+    background: white;
+    max-width: 500px;
+    margin: 0 auto;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+h1 {
+    font-size: 1.8rem;
+    margin-bottom: 1rem;
+    color: #0066cc;
+    text-align: center;
+}
+
+label {
+    display: block;
+    margin-top: 1rem;
+    font-weight: bold;
+}
+
+select,
+input[type="text"] {
+    width: 100%;
+    padding: 0.5rem;
+    margin-top: 0.3rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+button {
+    margin-top: 1.2rem;
+    padding: 0.6rem 1.2rem;
+    background: #28a745;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1rem;
+}
+
+button:hover {
+    background: #218838;
+}
+
+/* Tab styling */
+.tabs {
+    display: flex;
+    margin-bottom: 20px;
+}
+
+.tab-button {
+    flex: 1;
+    padding: 10px;
+    cursor: pointer;
+    background: #e9ecef;
+    border: 1px solid #ccc;
+    text-align: center;
+    border-bottom: none;
+    border-radius: 4px 4px 0 0;
+    transition: background 0.2s;
+}
+
+.tab-button.active {
+    background: white;
+    font-weight: bold;
+    border-bottom: 1px solid white;
+}
+
+.tab-content > div {
+    display: none;
+    background: white;
+    border: 1px solid #ccc;
+    border-radius: 0 4px 4px 4px;
+    padding: 1rem;
+}
+
+.tab-content > div.active {
+    display: block;
+}
+
+.site-footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: #f1f1f1;
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+    color: #666;
+    text-align: left;
+    box-shadow: 0 -1px 4px rgba(0,0,0,0.1);
+}
+
+.site-footer p {
+    margin: 0.2rem 0;
+}
+
+.site-footer a {
+    color: #0066cc;
+    text-decoration: none;
+}
+
+.site-footer a:hover {
+    text-decoration: underline;
+}
