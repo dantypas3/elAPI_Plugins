@@ -33,8 +33,14 @@ described in the prerequisites above.
 
 #### macOS / Linux
 
-Run `./run_export.command` from the repository root. The script creates a `venv` directory,
-installs `requirements.txt`, and then launches `plugins.resources.export_gui`.
+Run `./run_gui.command` from the repository root. The script creates a `venv` directory,
+installs `requirements.txt`, and then launches `gui.gui`.
+##### Important Note for MacOS Users:
+* Open System Settings → Privacy & Security
+* Scroll down to the Security section and allow the application/script when prompted.
+* Open a terminal, navigate to the directory containing this repository, and run:
+```sudo chmod +x run_gui.command```.  
+This ensures the script is executable by the system.
 
 #### Windows
 
