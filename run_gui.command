@@ -1,25 +1,24 @@
-#!/bin/zsh
+#!/usr/bin/env bash
 set -euo pipefail
 
-cd "$(dirname "$0")"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+cd "$SCRIPT_DIR"
 
-PY=python3
-if ! command -v "$PY" &>/dev/null; then
-  PY=python
-fi
-
-if [ ! -d venv ]; then
-  echo "Creating virtualenv…"
-  "$PY" -m venv venv
-  source venv/bin/activate
-  echo "Installing dependencies…"
-  if [ -f requirements.txt ]; then
-    pip install --upgrade pip
-    pip install -r requirements.txt
-  fi
+if [ -d "venv" ]; then
+    echo "Activating existing virtualenv…"
+    # shellcheck disable=SC1091
+    source "venv/bin/activate"
 else
-  echo "Activating virtualenv…"
-  source venv/bin/activate
+    echo "Creating virtualenv…"
+    python3 -m venv venv
+    # shellcheck disable=SC1091
+    source "venv/bin/activate"
+
+    if [ -f "requirements.txt" ]; then
+        echo "Installing dependencies from requirements.txt…"
+        pip install --upgrade pip
+        pip install -r requirements.txt
+    fi
 fi
 
 python -m gui.gui
