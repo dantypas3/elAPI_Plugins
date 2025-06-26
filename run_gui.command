@@ -1,7 +1,10 @@
-#!/bin/zsh
+#!/usr/bin/env bash
+
 set -euo pipefail
 
-cd "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+
+cd "$SCRIPT_DIR"
 
 PY=python3
 if ! command -v "$PY" &>/dev/null; then
