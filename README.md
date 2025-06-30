@@ -3,7 +3,6 @@
   <img src="https://github.com/user-attachments/assets/e8ce314e-2f66-47af-9d08-b94324646984" alt="SFB1638 Logo" width="200">
 </p>
 
-
 This repository contains helper tools and plugin prototypes for extending the [elAPI framework](https://github.com/uhd-urz/elAPI). elAPI Plugins are being
 developed as part of the INF Project of the **CRC 1638** at [Heidelberg University Biochemistry Center (BZH)](https://bzh.db-engine.de/)
 
@@ -14,8 +13,7 @@ These tools are built on top of the official elAPI framework.
 ### Prerequisites
 * [elAPI](https://github.com/uhd-urz/elAPI?tab=readme-ov-file#installation) should be installed and initialised with
 a valid elabFTW API key. Make sure to follow the elAPI [installation guide](https://github.com/uhd-urz/elAPI?tab=readme-ov-file#installation)
-to configure your environment correctly before using these tools.    
-
+to configure your environment correctly before using these tools.
 
 ### Important Points
 * These tools rely on the external “elAPI” library. Installing that library and configuring API credentials
@@ -27,7 +25,7 @@ on these utilities.
 that can be imported or run from a small driver script.
 
 ### Running the export GUI
-The repository provides helper scripts for starting `plugins.resources.export_gui` in a fresh
+The repository provides helper scripts for starting `gui.gui` in a fresh
 virtual environment. Ensure Python 3.12 or later is installed and that elAPI is configured as
 described in the prerequisites above.
 
@@ -90,10 +88,7 @@ Step-by-step:
 
 * Review the elAPI framework to understand the FixedEndpoint API and configuration.
 
-* Look at patch_resources.py to see how resource metadata is expected to be structured—particularly the extra_fields handling.
+* Look at `plugins/resources/patch.py` to see how resource metadata is expected to be structured—particularly the `extra_fields` handling.
 
 * If you want to use these scripts, prepare CSV files matching the expected columns and ensure the API endpoint 
 URLs/credentials are set up in your environment.
-
-* The empty plugins/migration/labfolder.py indicates planned work; exploring the elAPI docs or contacting the authors
-may clarify the intended migration functionality.
