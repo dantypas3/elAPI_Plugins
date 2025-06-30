@@ -2,7 +2,7 @@ import pandas as pd
 import json
 import math
 import warnings
-from utils import resource_utils as utils
+from utils import endpoints
 from datetime import datetime
 from pathlib import Path
 from typing import Union
@@ -45,9 +45,9 @@ def patch_resources_from_csv(csv_path: Union[Path, str], encoding: str = 'utf-8'
     df = df.map(lambda x: x.item() if hasattr(x, 'item') else x)
 
     for index, row in df.iterrows():
-        print(f"\nProcessing row {index} - Validating resource ID: {row['id']}")
-        utils.ResourceIDValidator(row['id']).validate()
-        session = utils.FixedResourceEndpoint()
+        endpoints.ResourceIDValidator(row['id']).validate()
+        endpoints.CategoryIDValidator(row['category']).validate()
+        session = endpoints.FixedResourceEndpoint()
 
         print(f"Fetching resource {row['id']} from API...")
         resource = session.get(endpoint_id=row['id']).json()

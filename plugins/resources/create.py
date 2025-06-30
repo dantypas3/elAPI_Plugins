@@ -1,8 +1,9 @@
 from pathlib import Path
 from typing import Union
-from utils import resource_utils
-from plugins.resources import patch_resources
+from utils import endpoints
+from plugins.resources.patch import patch_resources_from_csv
 import pandas as pd
+
 
 """
 This script creates resources using a fixed API endpoint.
@@ -16,6 +17,8 @@ Description:
     - Patches the created resource using data from a CSV file
 """
 
+#TODO restructure & make sure it creates everything without patching
+
 def create_resources(csv_path: Union[Path, str], encoding: str = 'utf-8', separator: str = ';'):
     """
     Create and patch one resource per row in the CSV file.
@@ -23,7 +26,7 @@ def create_resources(csv_path: Union[Path, str], encoding: str = 'utf-8', separa
     The user selects the category once and it's applied to all new resources.
     """
 
-    session = resource_utils.FixedCategoryEndpoint()
+    session = endpoints.FixedCategoryEndpoint()
     categories = session.get().json()
     df_categories = pd.json_normalize(categories)
 
@@ -45,7 +48,7 @@ def create_resources(csv_path: Union[Path, str], encoding: str = 'utf-8', separa
         if not row.get("id"):
             print(f"\n Creating resource for row {index}...")
 
-            new_resource = resource_utils.FixedResourceEndpoint()
+            new_resource = endpoints.FixedResourceEndpoint()
             post = new_resource.post(data={"id": resource_category_id})
             new_resource_url = post.headers.get("Location")
             new_resource_id = new_resource_url.rstrip("/").split("/")[-1]
@@ -55,7 +58,7 @@ def create_resources(csv_path: Union[Path, str], encoding: str = 'utf-8', separa
 
             df.to_csv(csv_path, encoding=encoding, sep=separator, index=False)
 
-            patch_resources.patch_resources_from_csv(csv_path, encoding, separator)
+            patch_resources_from_csv(csv_path, encoding, separator)
 
         else:
             print(f"Row {index} already has a resource_id ({row['id']}). Skipping.")

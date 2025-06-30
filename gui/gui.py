@@ -12,16 +12,16 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 if SCRIPT_DIR not in sys.path:
     sys.path.insert(0, SCRIPT_DIR)
 
-from plugins.resources.exports_resources import export_category_to_xlsx
-from plugins.resources.exports_resources import export_experiments_to_xlsx
+from plugins.resources.export import export_resources_to_xlsx
+from plugins.experiments.export import export_experiments_to_xlsx
 
-from utils import resource_utils
+from utils import endpoints
 
 app = Flask(__name__)
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    categories = resource_utils.FixedCategoryEndpoint().get().json()
+    categories = endpoints.FixedCategoryEndpoint().get().json()
     categories = sorted(categories, key=lambda c: c.get('title', '').lower())
 
     if request.method == 'POST':
@@ -31,7 +31,7 @@ def index():
         if export_type == 'category':
             category_id = int(request.form['category'])
             filename = request.form.get('filename') or None
-            out_path = export_category_to_xlsx(category_id, filename)
+            out_path = export_resources_to_xlsx(category_id, filename)
             return send_file(out_path, as_attachment=True)
         elif export_type == 'experiments':
             filename = request.form.get('exp_filename') or None
