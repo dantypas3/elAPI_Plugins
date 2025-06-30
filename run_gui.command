@@ -25,4 +25,5 @@ else
   source venv/bin/activate
 fi
 
+echo "Running gui"
 python -m gui.gui

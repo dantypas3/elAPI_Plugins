@@ -36,7 +36,7 @@ if exist requirements.txt (
     pip install -r requirements.txt
 )
 
-echo Running export_gui
+echo Running gui
 python -m gui.gui
 
 exit
