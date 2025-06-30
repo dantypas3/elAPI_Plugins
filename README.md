@@ -33,7 +33,7 @@ described in the prerequisites above.
 
 #### macOS / Linux
 
-Run `./run_gui.command` from the repository root. The script creates a `venv` directory,
+Double click `run_gui.command` from the repository root or execute it from a Terminal. The script creates a `venv` directory,
 installs `requirements.txt`, and then launches `gui.gui`.
 ##### Important Note for MacOS Users:
 * Open System Settings → Privacy & Security
@@ -44,8 +44,47 @@ This ensures the script is executable by the system.
 
 #### Windows
 
-Run `run_export.bat` from a Command Prompt. It performs the same setup steps and launches the
+Double click `run_gui_hidden.vbs` or execute it from a Terminal. It performs the same setup steps and launches the
 export GUI
+
+### Navigating to the Repository Directory (for Beginners)
+
+If you're not familiar with using the command line, here's how you can navigate to the folder containing this repository using the cd (change directory) command.
+Step-by-step:
+
+1. Open a Terminal / Command Prompt:
+
+    * macOS/Linux: Open the Terminal application.
+
+    *    Windows: Press Windows + R, type cmd, and press Enter.
+
+1. Find the Path to the Repository Folder:
+
+   Locate the folder where you downloaded or cloned this repository using your file manager.
+   Right-click the folder and:
+
+    * macOS/Linux: Select "Get Info" or "Properties" and copy the full path.
+
+    * Windows: Hold Shift and right-click the folder, then choose "Copy as path".
+
+1. Use the cd Command to Navigate:
+
+    In the terminal, type cd (with a space), then paste the folder path.
+
+    * Example for macOS/Linux:
+
+    `cd /Users/yourusername/Downloads/elAPI_Plugins`
+
+    * Example for Windows:
+
+    `cd "C:\Users\YourName\Downloads\elAPI_Plugins"`
+
+    On Windows, make sure the path is in double quotes if it contains spaces.
+
+1. Confirm You're in the Right Place:
+
+    Type `ls` (macOS/Linux) or `dir` (Windows) to list the contents of the folder. You should see files like run_gui.command,
+   requirements.txt, and folders like plugins/ and utils/.
 
 ### Where to go next
 
