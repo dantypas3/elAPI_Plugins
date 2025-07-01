@@ -26,13 +26,15 @@ that can be imported or run from a small driver script.
 
 ### Running the export GUI
 The repository provides helper scripts for starting `gui.gui` in a fresh
-virtual environment. Ensure Python 3.12 or later is installed and that elAPI is configured as
-described in the prerequisites above.
+virtual environment. Ensure Python 3.12 or later is installed. These scripts now
+check for a configured API token and, if none is found, automatically launch
+`elapi init` to create one. elAPI must therefore be installed as described in
+the prerequisites above.
 
 #### macOS / Linux
 
 Double click `run_gui.command` from the repository root or execute it from a Terminal. The script creates a `venv` directory,
-installs `requirements.txt`, and then launches `gui.gui`.
+installs `requirements.txt`, ensures an API token is configured (running `elapi init` if necessary), and then launches `gui.gui`.
 ##### Important Note for MacOS Users:
 * Open System Settings → Privacy & Security
 * Scroll down to the Security section and allow the application/script when prompted.
@@ -42,8 +44,7 @@ This ensures the script is executable by the system.
 
 #### Windows
 
-Double click `run_gui_hidden.vbs` or execute it from a Terminal. It performs the same setup steps and launches the
-export GUI
+Double click `run_gui_hidden.vbs` or execute it from a Terminal. This wrapper runs `run_gui.bat` in the background, which creates the `venv`, installs dependencies, checks for an API token (running `elapi init` when needed) and finally launches the export GUI.
 
 ### Navigating to the Repository Directory (for Beginners)
 
