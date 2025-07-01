@@ -50,12 +50,12 @@ class ResourceIDValidator(Validator):
 
 class CategoryIDValidator(Validator):
     def __init__(self, category_id: Union[str, int]):
-        self.resource_id = category_id
         self._resource_endpoint = FixedCategoryEndpoint()
+        self.category_id = category_id
 
     @property
     def category_id(self):
-        return self._resource_id
+        return self._category_id
 
     @category_id.setter
     def category_id(self, value):
@@ -63,7 +63,7 @@ class CategoryIDValidator(Validator):
             raise ValidationError("category_id cannot be None.")
         if not hasattr(value, "__str__"):
             raise ValidationError("Category ID must be convertible to string.")
-        self.category_id = str(value)
+        self._category_id = str(value)
 
     def validate(self):
         if re.match(r"^\d+$|^me$", self.category_id, re.IGNORECASE):

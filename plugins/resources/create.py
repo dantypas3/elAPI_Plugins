@@ -27,9 +27,7 @@ def create_resources(csv_path: Union[Path, str], encoding: str = 'utf-8', separa
     """
 
     session = endpoints.FixedCategoryEndpoint()
-    categories = session.get().json()
-    df_categories = pd.json_normalize(categories)
-
+    df_categories = pd.json_normalize(session.get().json())
 
     print("ID  Title")
     for category in categories:
@@ -50,6 +48,7 @@ def create_resources(csv_path: Union[Path, str], encoding: str = 'utf-8', separa
 
             new_resource = endpoints.FixedResourceEndpoint()
             post = new_resource.post(data={"id": resource_category_id})
+
             new_resource_url = post.headers.get("Location")
             new_resource_id = new_resource_url.rstrip("/").split("/")[-1]
 
