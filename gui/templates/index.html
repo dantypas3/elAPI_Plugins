@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Export Resources</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .tabs { display: flex; margin-bottom: 20px; }
+        .tab-button {
+            flex: 1;
+            padding: 10px;
+            cursor: pointer;
+            background: #f1f1f1;
+            border: 1px solid #ccc;
+            text-align: center;
+            transition: background 0.2s;
+        }
+        .tab-button.active {
+            background: #fff;
+            border-bottom: none;
+            font-weight: bold;
+        }
+        .tab-content > div { display: none; }
+        .tab-content > div.active { display: block; }
+        .flashes { list-style: none; padding: 0; margin: 1rem 0; }
+        .flashes li { padding: 0.5rem; border-radius: 4px; margin-bottom: 0.5rem; }
+        .flashes .success { background: #d4edda; color: #155724; }
+        .flashes .error   { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div style="text-align: center; margin-bottom: 20px;">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="SFB1638 Logo" width="100">
+    </div>
+    <h1>Manage eLabFTW Data</h1>
+
+    <!-- Tabs -->
+    <div class="tabs">
+        <div id="tab-cat" class="tab-button active">Resources</div>
+        <div id="tab-exp" class="tab-button">Experiments</div>
+        <div id="tab-imp" class="tab-button">Imports</div>
+    </div>
+
+    <!-- Tab Panes -->
+    <div class="tab-content">
+        <!-- Resources Export -->
+        <div id="content-cat" class="active">
+            <form method="post">
+                <input type="hidden" name="export_type" value="category">
+                <label for="category">Category:</label>
+                <select name="category" id="category">
+                    {% for cat in categories %}
+                    <option value="{{ cat['id'] }}">{{ cat['title'] }}</option>
+                    {% endfor %}
+                </select>
+
+                <label for="filename">File name (optional):</label>
+                <input type="text" id="filename" name="filename">
+
+                <button type="submit">Export Resources</button>
+            </form>
+        </div>
+
+        <!-- Experiments Export -->
+        <div id="content-exp">
+            <form method="post">
+                <input type="hidden" name="export_type" value="experiments">
+                <label for="exp_filename">File name (optional):</label>
+                <input type="text" id="exp_filename" name="exp_filename">
+
+                <button type="submit">Export Experiments</button>
+            </form>
+        </div>
+
+        <!-- Imports -->
+        <div id="content-imp">
+            <form method="post" enctype="multipart/form-data">
+                <input type="hidden" name="export_type" value="imports">
+
+                <label for="import_file">Select file to upload:</label>
+                <input type="file" id="import_file" name="import_file" accept=".xlsx,.csv" required>
+
+                <label for="imp_category">Category:</label>
+                <select name="category" id="imp_category">
+                    {% for cat in categories %}
+                    <option value="{{ cat['id'] }}">{{ cat['title'] }}</option>
+                    {% endfor %}
+                </select>
+
+                <button type="submit">Import Resources</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <ul class="flashes">
+          {% for category, msg in messages %}
+            <li class="{{ category }}">{{ msg }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
+</div>
+
+<!-- Site Footer -->
+<footer class="site-footer">
+    <p>
+        Created for:
+        <a href="https://bzh.db-engine.de/" target="_blank">
+            Heidelberg University, Biochemistry Center
+        </a>, SFB 1638
+    </p>
+    <p>
+        Built by:
+        <a href="https://github.com/dantypas3" target="_blank">D. Antypas</a>
+    </p>
+</footer>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const tabs = {
+        'cat': { tab: 'tab-cat', pane: 'content-cat' },
+        'exp': { tab: 'tab-exp', pane: 'content-exp' },
+        'imp': { tab: 'tab-imp', pane: 'content-imp' }
+    };
+
+    Object.values(tabs).forEach(({ tab, pane }) => {
+        document.getElementById(tab).addEventListener('click', () => {
+            Object.values(tabs).forEach(({ tab, pane }) => {
+                document.getElementById(tab).classList.remove('active');
+                document.getElementById(pane).classList.remove('active');
+            });
+            document.getElementById(tab).classList.add('active');
+            document.getElementById(pane).classList.add('active');
+        });
+    });
+});
+</script>
+</body>
+</html>
