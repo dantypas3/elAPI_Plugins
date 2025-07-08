@@ -7,7 +7,7 @@ from datetime import datetime
 
 from werkzeug.utils import secure_filename
 
-from utils.content_extraction import strip_html
+from src.elabftw_client.utils.content_extraction import strip_html
 import utils.endpoints as endpoints
 
 

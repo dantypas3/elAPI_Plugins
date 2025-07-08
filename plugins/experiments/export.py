@@ -2,13 +2,10 @@ from typing import Union
 from pathlib import Path
 from datetime import datetime
 from werkzeug.utils import secure_filename
-from utils.content_extraction import strip_html
+from src.elabftw_client.utils.content_extraction import strip_html
 
 import json
-import os
 import pandas as pd
-import openpyxl
-from elapi.api import FixedEndpoint
 import utils.endpoints as endpoints
 
 """
