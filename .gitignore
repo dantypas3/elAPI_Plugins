@@ -1,5 +1,9 @@
 *.csv
+*.xlsx
+*.ipynb
 .idea/
+venv/
+.venv/
 .vscode/
 __pycache__/
 *.py[cod]
