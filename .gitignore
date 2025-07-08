@@ -1,6 +1,7 @@
 *.csv
 *.xlsx
 *.ipynb
+*.json
 .idea/
 venv/
 .venv/
