@@ -4,56 +4,52 @@ import threading
 import time
 import webbrowser
 
-from flask import Flask, render_template, request, send_file, flash, redirect, url_for
+from flask import Flask, Response, render_template, request, send_file, flash, redirect, url_for
 from werkzeug.serving import make_server
 from werkzeug.utils import secure_filename
+from werkzeug.wrappers.response import Response as WerkzeugResponse
 
-import io
+from typing import Union, Tuple
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 if SCRIPT_DIR not in sys.path:
     sys.path.insert(0, SCRIPT_DIR)
 
-UPLOAD_FOLDER = os.path.join(SCRIPT_DIR, 'uploads')
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
-from plugins.resources.create import create_resources
-from plugins.resources.export import export_resources_to_xlsx
-from plugins.experiments.export import export_experiments_to_xlsx
-from utils import endpoints
+from src.elabftw_client.utils import endpoints
+from src.elabftw_client.factories import ExporterFactory, ImporterFactory
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+UPLOAD_DIR = os.path.join(SCRIPT_DIR, 'uploads')
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+app.config['UPLOAD_FOLDER'] = UPLOAD_DIR
 
 @app.route('/', methods=['GET', 'POST'])
-def index():
-    # Fetch and sort categories for dropdowns
-    categories = endpoints.FixedCategoryEndpoint().get().json()
+def index() -> Union[str, WerkzeugResponse]:
+    categories = endpoints.get_fixed("category").get().json()
     categories = sorted(categories, key=lambda c: c.get('title', '').lower())
 
     if request.method == 'POST':
         action = request.form.get('export_type')
 
-        if action == 'category':
-            cid = int(request.form['category'])
+        if action == 'resources':
+            cid   = int(request.form['category'])
             fname = request.form.get('filename') or None
-            path = export_resources_to_xlsx(cid, fname)
+            exporter = ExporterFactory.get_exporter('resources', cid)
+            path     = exporter.xlsx_export(fname)
             return send_file(path, as_attachment=True)
 
         elif action == 'experiments':
             fname = request.form.get('exp_filename') or None
-            path = export_experiments_to_xlsx(fname)
+            exporter = ExporterFactory.get_exporter('experiments')
+            path     = exporter.xlsx_export(fname)
             return send_file(path, as_attachment=True)
 
         elif action == 'imports':
-            try:
-                cid = int(request.form['category'])
-            except (KeyError, ValueError):
-                flash("Missing or invalid category for import", "error")
-                return redirect(url_for('index'))
-
+            cid = int(request.form['category'])
             import_path = request.form.get('import_path', '').strip()
+
             if import_path:
                 full_path = os.path.abspath(import_path)
                 if not os.path.isfile(full_path):
@@ -71,7 +67,8 @@ def index():
                 source = full_path
 
             try:
-                count = create_resources(source, cid)
+                importer = ImporterFactory.get_importer('resources')
+                count = importer.create_new(csv_path=full_path, category_id=cid)
                 flash(f"Imported {count} resources from {source}", "success")
             except Exception as e:
                 flash(f"Import failed: {e}", "error")
@@ -85,19 +82,15 @@ def index():
     return render_template('index.html', categories=categories)
 
 @app.route('/shutdown', methods=['POST'])
-def shutdown():
+def shutdown() -> Tuple[str, int]:
     return 'OK', 200
 
-
-def _open_browser():
+def _open_browser() -> None:
     time.sleep(1)
     webbrowser.open('http://127.0.0.1:5000')
 
 if __name__ == '__main__':
-    http_server = make_server('127.0.0.1', 5000, app)
-    server_thread = threading.Thread(target=http_server.serve_forever, daemon=True)
-    server_thread.start()
-
-    print("Serving on http://127.0.0.1:5000")
+    server = make_server('127.0.0.1', 5000, app)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
     threading.Thread(target=_open_browser, daemon=True).start()
-    server_thread.join()
+    server.serve_forever()

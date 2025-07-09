@@ -48,7 +48,7 @@
         <!-- Resources Export -->
         <div id="content-cat" class="active">
             <form method="post">
-                <input type="hidden" name="export_type" value="category">
+                <input type="hidden" name="export_type" value="resources">
                 <label for="category">Category:</label>
                 <select name="category" id="category">
                     {% for cat in categories %}
@@ -65,13 +65,12 @@
 
         <!-- Experiments Export -->
         <div id="content-exp">
-            <form method="post">
-                <input type="hidden" name="export_type" value="experiments">
-                <label for="exp_filename">File name (optional):</label>
-                <input type="text" id="exp_filename" name="exp_filename">
-
-                <button type="submit">Export Experiments</button>
-            </form>
+          <form method="post">
+            <input type="hidden" name="export_type" value="experiments">
+            <label for="exp_filename">File name (optional):</label>
+            <input type="text" id="exp_filename" name="exp_filename">
+            <button type="submit">Export Experiments</button>
+          </form>
         </div>
 
         <!-- Imports -->

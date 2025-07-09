@@ -1,13 +1,13 @@
 from elapi.api import FixedEndpoint
 
 _ENDPOINT_MAP = {
-    "resource": "items",
+    "resources": "items",
     "category": "items_types",
-    "experiment": "experiments",
+    "experiments": "experiments",
 }
 
 def get_fixed(name: str) -> FixedEndpoint:
-    """Return a FixedEndpoint for one of: resource, category, experiment."""
+    """Return a FixedEndpoint for one of: resource, category, experiments."""
     try:
         path = _ENDPOINT_MAP[name]
     except KeyError:

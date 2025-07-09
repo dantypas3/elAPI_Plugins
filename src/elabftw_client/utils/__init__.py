@@ -1,4 +1,4 @@
-from src.elabftw_client.utils.endpoints import FixedEndpoint
-from src.elabftw_client.utils.endpoints import FixedEndpoint
+from .endpoints import FixedEndpoint
+from .validators import IDValidator
 
-__all__ = ["FixedEndpoint", "FixedEndpoint"]
+__all__ = ["FixedEndpoint", "IDValidator"]

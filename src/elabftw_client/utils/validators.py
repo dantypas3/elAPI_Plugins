@@ -1,6 +1,6 @@
 import re
-from elapi.validators import Validator, ValidationError
 from typing import Union
+from elapi.validators import Validator, ValidationError
 from src.elabftw_client.utils.endpoints import get_fixed
 
 _ID_PATTERN = re.compile(r"^\d+$|^me$", re.IGNORECASE)
@@ -13,16 +13,15 @@ class IDValidator(Validator):
         value: the id to validate (string or int)
         """
         self.name = name
-        self._value = None
-        self.value = value
+        self._value = str(value)
         self._endpoint = get_fixed(name)
 
     @property
     def value(self) -> str:
-        return self._value
+        return self.value
 
     @value.setter
-    def value(self, v: Union[str, int]):
+    def value(self, v: Union[str, int]) -> None:
         if v is None:
             raise ValidationError(f"{self.name}_id cannot be None.")
         if not hasattr(v, "__str__"):
