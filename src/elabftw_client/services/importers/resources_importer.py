@@ -4,6 +4,7 @@ from pathlib import Path
 
 from src.elabftw_client.utils.endpoints import get_fixed
 from src.elabftw_client.utils.validators import IDValidator
+from src.elabftw_client.utils.csv_tools import CsvTools
 from .base_importer import BaseImporter
 
 
@@ -13,14 +14,14 @@ class ResourcesImporter(BaseImporter):
 		self._res_endpoint = get_fixed("resources")
 		self._cat_endpoint = get_fixed("category")
 
-	def create_new(self, csv_path: Union[Path, str], category_id : int, encoding: str = 'utf-8',
-	                     separator: str = ';') -> int:
+	def create_new(self, csv_path: Union[Path, str], category_id : int) -> int:
 
 		new_resources = 0
 		IDValidator("category", category_id).validate()
 
-
-		df = pd.read_csv(csv_path, encoding=encoding, sep=separator)
+		enc = CsvTools.detect_file_encoding(path = csv_path)
+		delimiter = CsvTools.detect_delimiter(path = csv_path, encoding = enc)
+		df = pd.read_csv(csv_path, encoding=enc, sep=delimiter)
 
 		for index, row in df.iterrows():
 			new_resource = self._res_endpoint

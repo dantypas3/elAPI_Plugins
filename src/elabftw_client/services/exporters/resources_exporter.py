@@ -13,7 +13,7 @@ from .base_exporter import BaseExporter
 class ResourceExporter(BaseExporter):
     def __init__(self, category_id: int) -> None:
         self._category_id = category_id
-        self._endpoint = get_fixed("resource")
+        self._endpoint = get_fixed("resources")
 
     def xlsx_export(self, export_file: Optional[str] = None) -> Path:
         IDValidator("category", self._category_id).validate()
