@@ -2,6 +2,7 @@
 *.xlsx
 *.ipynb
 *.json
+mypy.ini
 .idea/
 venv/
 .venv/
