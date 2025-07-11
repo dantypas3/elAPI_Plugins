@@ -1,9 +1,9 @@
 import csv
-import chardet
-import tempfile
-import pandas as pd
-from typing import Union
 from pathlib import Path
+from typing import Union
+
+import chardet
+
 
 class CsvTools:
 

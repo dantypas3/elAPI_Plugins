@@ -1,5 +1,6 @@
 from bs4 import BeautifulSoup
 
+
 def strip_html(html_str: str) -> str:
     """
     Convert HTML into plain text:
@@ -10,10 +11,7 @@ def strip_html(html_str: str) -> str:
 
     paragraphs = soup.find_all("p")
     if paragraphs:
-        texts = [
-            p.get_text(separator=" ", strip=True)
-            for p in paragraphs
-        ]
+        texts = [p.get_text(separator=" ", strip=True) for p in paragraphs]
         return "\n\n".join(texts)
 
     return soup.get_text(separator=" ", strip=True)

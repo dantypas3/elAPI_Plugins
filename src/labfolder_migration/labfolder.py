@@ -1,16 +1,18 @@
-import requests
-
+from typing import Any, Dict, List
 from urllib.parse import urljoin
 
-from typing import List, Dict, Any
+import requests
 
 
 class Labfolder:
     """Client for Labfolder v2 API."""
 
-    def __init__(self, email: str, password: str,
-
-                 base_url: str = "https://labfolder.labforward.app/api/v2"):
+    def __init__(
+        self,
+        email: str,
+        password: str,
+        base_url: str = "https://labfolder.labforward.app/api/v2",
+    ):
 
         self.email = email
 
@@ -22,26 +24,25 @@ class Labfolder:
 
         self._session = requests.Session()
 
-        self._session.headers.update({
-
-            "Content-Type": "application/json",
-
-            "User-Agent": f"MyLabApp; {self.email}"
-
-        })
+        self._session.headers.update(
+            {
+                "Content-Type": "application/json",
+                "User-Agent": f"MyLabApp; {self.email}",
+            }
+        )
 
     def login(self) -> str:
-
         """Authenticate and store bearer token."""
 
         url = f"{self.base_url}/login"
 
-        resp = self._session.post(url, json={"user": self.email, "password": self.password})
+        resp = self._session.post(
+            url, json={"user": self.email, "password": self.password}
+        )
 
         try:
 
             resp.raise_for_status()
-
 
         except requests.HTTPError as e:
 
@@ -59,7 +60,6 @@ class Labfolder:
         return self._token
 
     def logout(self) -> None:
-
         """Invalidate the current token."""
 
         if not self._token:
@@ -73,10 +73,9 @@ class Labfolder:
 
         self._session.headers.pop("Authorization", None)
 
-    def get_projects(self, limit: int = 100, include_hidden: bool = True
-
-                     ) -> List[Dict[str, Any]]:
-
+    def get_projects(
+        self, limit: int = 100, include_hidden: bool = True
+    ) -> List[Dict[str, Any]]:
         """Fetch all projects, handling pagination."""
 
         projects: List[Dict[str, Any]] = []
@@ -85,7 +84,11 @@ class Labfolder:
 
         while True:
 
-            params = {"limit": limit, "offset": offset, "include_hidden": include_hidden}
+            params = {
+                "limit": limit,
+                "offset": offset,
+                "include_hidden": include_hidden,
+            }
 
             resp = self._session.get(f"{self.base_url}/projects", params=params)
 
@@ -108,7 +111,6 @@ class Labfolder:
         return projects
 
     def get_project_entries(self) -> List[Dict[str, Any]]:
-
         """Fetch all entries across all projects."""
 
         entries: List[Dict[str, Any]] = []
@@ -116,7 +118,9 @@ class Labfolder:
         for proj in self.get_projects():
             proj_id = proj["id"]
 
-            resp = self._session.get(f"{self.base_url}/entries", params={"project_ids": proj_id})
+            resp = self._session.get(
+                f"{self.base_url}/entries", params={"project_ids": proj_id}
+            )
 
             resp.raise_for_status()
 
@@ -133,7 +137,7 @@ class Labfolder:
         for project in project_entries:
 
             for entry in project_entries[project]:
-                entry_id = entry['id']
+                entry_id = entry["id"]
 
                 entry_url = urljoin(self.base_url, f"entries/{entry_id}")
 
@@ -141,7 +145,7 @@ class Labfolder:
 
                 req_json = req.json()
 
-                print(req_json['id'])
+                print(req_json["id"])
 
                 entries.append(req_json)
 

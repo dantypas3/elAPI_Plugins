@@ -1,15 +1,19 @@
 import re
 from typing import Union
-from elapi.validators import Validator, ValidationError
+
+from elapi.validators import ValidationError, Validator
+
 from src.elabftw_client.utils.endpoints import get_fixed
 
 _ID_PATTERN = re.compile(r"^\d+$|^me$", re.IGNORECASE)
 
+
 class IDValidator(Validator):
     """Generic validator for any single-id endpoint."""
+
     def __init__(self, name: str, value: Union[str, int]):
         """
-        name: one of “resource”, “category”, “experiment”… 
+        name: one of “resource”, “category”, “experiment”…
         value: the id to validate (string or int)
         """
         self.name = name

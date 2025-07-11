@@ -1,61 +1,76 @@
+/* General Reset & Base */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
 body {
     font-family: 'Roboto', sans-serif;
     background: #f4f7f8;
     color: #333;
-    margin: 0;
     padding: 2rem 2rem 4rem;
 }
 
+/* Container */
 .container {
     background: white;
-    max-width: 500px;
+    max-width: 600px;
     margin: 0 auto;
-    padding: 1.5rem;
+    padding: 2rem;
     border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
 }
 
+/* Headings */
 h1 {
-    font-size: 1.8rem;
-    margin-bottom: 1rem;
+    font-size: 2rem;
+    margin-bottom: 1.5rem;
     color: #0066cc;
     text-align: center;
 }
 
+/* Labels and Inputs */
 label {
     display: block;
     margin-top: 1rem;
-    font-weight: bold;
+    font-weight: 500;
 }
 
-select,
-input[type="text"] {
+input[type="text"],
+input[type="file"],
+select {
     width: 100%;
-    padding: 0.5rem;
-    margin-top: 0.3rem;
+    padding: 0.6rem;
+    margin-top: 0.4rem;
     border: 1px solid #ccc;
     border-radius: 4px;
+    font-size: 1rem;
+    background-color: #fff;
 }
 
+/* Buttons */
 button {
     margin-top: 1.2rem;
-    padding: 0.6rem 1.2rem;
+    padding: 0.6rem 1.4rem;
     background: #28a745;
     color: white;
     border: none;
     border-radius: 4px;
-    cursor: pointer;
     font-size: 1rem;
+    cursor: pointer;
+    transition: background 0.3s ease;
 }
 
 button:hover {
     background: #218838;
 }
 
-/* Tab styling */
+/* Tabs */
 .tabs {
     display: flex;
-    margin-bottom: 20px;
+    margin-bottom: 1rem;
+    gap: 4px;
 }
 
 .tab-button {
@@ -66,7 +81,8 @@ button:hover {
     border: 1px solid #ccc;
     text-align: center;
     border-bottom: none;
-    border-radius: 4px 4px 0 0;
+    border-radius: 6px 6px 0 0;
+    font-weight: 500;
     transition: background 0.2s;
 }
 
@@ -76,33 +92,73 @@ button:hover {
     border-bottom: 1px solid white;
 }
 
+/* Tab Content */
 .tab-content > div {
     display: none;
     background: white;
     border: 1px solid #ccc;
-    border-radius: 0 4px 4px 4px;
-    padding: 1rem;
+    border-radius: 0 6px 6px 6px;
+    padding: 1.5rem;
+    animation: fadeIn 0.3s ease;
 }
 
 .tab-content > div.active {
     display: block;
 }
 
+/* Flash Messages */
+.flashes {
+    list-style: none;
+    padding: 0;
+    margin: 1rem 0;
+}
+
+.flashes li {
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.75rem;
+    border-radius: 4px;
+    font-weight: 500;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.flashes .success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.flashes .error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.flashes .success::before {
+    content: "✔ ";
+    font-weight: bold;
+}
+
+.flashes .error::before {
+    content: "✖ ";
+    font-weight: bold;
+}
+
+/* Footer */
 .site-footer {
     position: fixed;
     bottom: 0;
     left: 0;
     width: 100%;
     background: #f1f1f1;
-    padding: 0.5rem 1rem;
+    padding: 0.75rem 1.5rem;
     font-size: 0.85rem;
     color: #666;
     text-align: left;
-    box-shadow: 0 -1px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.05);
 }
 
 .site-footer p {
-    margin: 0.2rem 0;
+    margin: 0.25rem 0;
 }
 
 .site-footer a {
@@ -112,4 +168,10 @@ button:hover {
 
 .site-footer a:hover {
     text-decoration: underline;
+}
+
+/* Animation */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
 }
