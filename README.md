@@ -3,93 +3,121 @@
   <img src="https://github.com/user-attachments/assets/e8ce314e-2f66-47af-9d08-b94324646984" alt="SFB1638 Logo" width="200">
 </p>
 
-This repository contains helper tools and plugin prototypes for extending the [elAPI framework](https://github.com/uhd-urz/elAPI). elAPI Plugins are being
-developed as part of the INF Project of the **CRC 1638** at [Heidelberg University Biochemistry Center (BZH)](https://bzh.db-engine.de/)
 
-These tools are designed to simplify resource interaction (e.g. patching metadata) and serve as early building blocks for elAPI plugins.
+This repository contains helper tools and plugin prototypes for extending the [elAPI framework](https://github.com/uhd-urz/elAPI).  
+elAPI Plugins are being developed as part of the INF Project of the **CRC 1638** at the [Heidelberg University Biochemistry Center (BZH)](https://bzh.db-engine.de/).
 
-These tools are built on top of the official elAPI framework.
+These tools are designed to simplify resource interaction (e.g., patching metadata) and serve as early building blocks for elAPI plugins.  
+They are built on top of the official elAPI framework.
 
-### Prerequisites
-* [elAPI](https://github.com/uhd-urz/elAPI?tab=readme-ov-file#installation) should be installed and initialised with
-a valid elabFTW API key. Make sure to follow the elAPI [installation guide](https://github.com/uhd-urz/elAPI?tab=readme-ov-file#installation)
-to configure your environment correctly before using these tools.
+---
 
-### Important Points
-* These tools rely on the external “elAPI” library. Installing that library and configuring API credentials
-(as described in the upstream elAPI README) is required before these scripts can function.
-* The utilities under utils/ wrap elAPI’s endpoints and provide validation helpers. Scripts in plugins/resources/ depend
-on these utilities.
-* Files lack trailing newlines (the shell prompt appears after the last line when viewing them), but the code itself is intact.
-* There are no tests or entry-point scripts; each module exposes functions (e.g., create_resources, patch_resources_from_csv)
-that can be imported or run from a small driver script.
+## Prerequisites
 
-### Running the export GUI
-The repository provides helper scripts for starting `gui.gui` in a fresh
-virtual environment. Ensure Python 3.12 or later is installed. These scripts now
-check for a configured API token and, if none is found, automatically launch
-`elapi init` to create one. elAPI must therefore be installed as described in
-the prerequisites above.
+- [elAPI](https://github.com/uhd-urz/elAPI?tab=readme-ov-file#installation) must be installed and initialized with a valid elabFTW API key.  
+- Follow the elAPI [installation guide](https://github.com/uhd-urz/elAPI?tab=readme-ov-file#installation) to configure your environment correctly before using these tools.
 
-#### macOS / Linux
+---
 
-Double click `run_gui.command` from the repository root or execute it from a Terminal. The script creates a `venv` directory,
-installs `requirements.txt`, ensures an API token is configured (running `elapi init` if necessary), and then launches `gui.gui`.
-##### Important Note for MacOS Users:
-* Open System Settings → Privacy & Security
-* Scroll down to the Security section and allow the application/script when prompted.
-* Open a terminal, navigate to the directory containing this repository, and run:
-```sudo chmod +x run_gui.command```.  
-This ensures the script is executable by the system.
+## Important Notes
 
-#### Windows
+- These tools depend on the external **elAPI** library. Install that library and configure API credentials as described in the elAPI README.  
+- The utilities under `utils/` wrap elAPI’s endpoints and provide validation helpers. Scripts in `plugins/resources/` depend on these utilities.  
+- Files may lack trailing newlines (which may cause the shell prompt to appear immediately after the last line), but the code itself is intact.  
+- There are no tests or entry-point scripts; each module exposes functions (e.g., `create_resources`, `patch_resources_from_csv`) that can be imported or run from a small driver script.
 
-Double click `run_gui_hidden.vbs` or execute it from a Terminal. This wrapper runs `run_gui.bat` in the background, which creates the `venv`, installs dependencies, checks for an API token (running `elapi init` when needed) and finally launches the export GUI.
+---
 
-### Navigating to the Repository Directory (for Beginners)
+## Running the Export GUI
 
-If you're not familiar with using the command line, here's how you can navigate to the folder containing this repository using the cd (change directory) command.
-Step-by-step:
+The repository provides helper scripts for starting `gui.gui` in a fresh virtual environment. Ensure Python 3.12 or later is installed.  
+These scripts automatically check for a configured API token and, if none is found, launch `elapi init`.  
+> **Note:** elAPI must be installed as described above.
 
-1. Open a Terminal / Command Prompt:
+### macOS
 
-    * macOS/Linux: Open the Terminal application.
+Double-click `run_gui.command` from the repository root or run it from Terminal. The script will:
+1. Create a `venv` directory  
+2. Install the dependencies from `requirements.txt`  
+3. Ensure an API token is configured (runs `elapi init` if needed)  
+4. Launch `gui.gui`
 
-    *    Windows: Press Windows + R, type cmd, and press Enter.
+### Windows
 
-1. Find the Path to the Repository Folder:
+Double-click `run_gui_hidden.vbs` or run it from a terminal. This wrapper calls `run_gui.bat`, which will:
+1. Create the virtual environment  
+2. Install dependencies  
+3. Check for an API token (runs `elapi init` if necessary)  
+4. Launch the export GUI
 
-   Locate the folder where you downloaded or cloned this repository using your file manager.
-   Right-click the folder and:
+---
 
-    * macOS/Linux: Select "Get Info" or "Properties" and copy the full path.
+## Navigating to the Repository Directory (For Beginners)
 
-    * Windows: Hold Shift and right-click the folder, then choose "Copy as path".
+If you're not familiar with the command line, follow these steps:
 
-1. Use the cd Command to Navigate:
+1. **Open a Terminal / Command Prompt**  
+   - **macOS/Linux:** Open the *Terminal* app  
+   - **Windows:** Press `Windows + R`, type `cmd`, and press Enter  
 
-    In the terminal, type cd (with a space), then paste the folder path.
+2. **Find the Repository Path**  
+   Locate the folder where you downloaded or cloned this repository.  
+   - **macOS:** Right-click → “Get Info” → copy the full path  
+   - **Windows:** Shift + right-click → “Copy as path”
 
-    * Example for macOS/Linux:
+3. **Use `cd` to Navigate**  
+   In the terminal, type `cd` followed by the path:  
+   - **macOS example:**  
+     ```bash
+     cd /Users/yourusername/Downloads/elAPI_Plugins
+     ```  
+   - **Windows example:**  
+     ```cmd
+     cd "C:\Users\YourName\Downloads\elAPI_Plugins"
+     ```
 
-    `cd /Users/yourusername/Downloads/elAPI_Plugins`
+4. **Confirm You’re in the Right Folder**  
+   ```bash
+   ls   # macOS/Linux
+   dir  # Windows
+   ```  
+   You should see:
+   ```
+   run_gui.command
+   requirements.txt
+   plugins/
+   utils/
+   ```
 
-    * Example for Windows:
+5. **Run the GUI Launcher**  
+   - **macOS:**  
+     ```bash
+     ./run_gui.command
+     ```  
+   - **Windows:**  
+     ```cmd
+     ./run_gui.vbs
+     ```
 
-    `cd "C:\Users\YourName\Downloads\elAPI_Plugins"`
+---
 
-    On Windows, make sure the path is in double quotes if it contains spaces.
+## Important Note for macOS Users (Permissions)
 
-1. Confirm You're in the Right Place:
+If execution is blocked:
+1. Open **System Settings → Privacy & Security**  
+2. Scroll down to the **Security** section and allow the blocked script  
+3. In Terminal, run:
+   ```bash
+   sudo chmod +x run_gui.command
+   ```  
+4. Re-run the launcher:
+   ```bash
+   ./run_gui.command
+   ```
 
-    Type `ls` (macOS/Linux) or `dir` (Windows) to list the contents of the folder. You should see files like run_gui.command,
-   requirements.txt, and folders like plugins/ and utils/.
+---
 
-### Where to go next
+## Where to Go Next
 
-* Review the elAPI framework to understand the FixedEndpoint API and configuration.
-
-* Look at `plugins/resources/patch.py` to see how resource metadata is expected to be structured—particularly the `extra_fields` handling.
-
-* If you want to use these scripts, prepare CSV files matching the expected columns and ensure the API endpoint 
-URLs/credentials are set up in your environment.
+- Review the [elAPI framework](https://github.com/uhd-urz/elAPI) to understand how the FixedEndpoint API works and how to configure it.  
+- Prepare CSV files with the expected columns and ensure your environment is set up with the correct API endpoint URLs and credentials.
