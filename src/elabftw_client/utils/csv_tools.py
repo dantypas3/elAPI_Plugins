@@ -1,4 +1,6 @@
 import csv
+import pandas as pd
+
 from pathlib import Path
 from typing import Union
 
@@ -20,3 +22,10 @@ class CsvTools:
             sample = f.read(2048)
         sniff = csv.Sniffer().sniff(sample, delimiters=[",", ";", "\t", "|"])
         return sniff.delimiter
+
+    @staticmethod
+    def csv_to_df(csv_path: Union[Path, str]) -> pd.DataFrame:
+        enc = CsvTools.detect_file_encoding(path=csv_path)
+        delimiter = CsvTools.detect_delimiter(path=csv_path, encoding=enc)
+        df = pd.read_csv(csv_path, encoding=enc, sep=delimiter)
+        return df

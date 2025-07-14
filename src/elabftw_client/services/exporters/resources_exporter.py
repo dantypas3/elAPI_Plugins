@@ -19,7 +19,7 @@ class ResourceExporter(BaseExporter):
         self._endpoint = get_fixed("resources")
 
     def xlsx_export(self, export_file: Optional[str] = None) -> Path:
-        IDValidator("category", self._category_id).validate()
+        IDValidator("categories", self._category_id).validate()
 
         resources = self._endpoint.get(query={"cat": self._category_id}).json()
         df = pd.json_normalize(resources)

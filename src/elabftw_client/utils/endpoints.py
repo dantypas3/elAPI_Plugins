@@ -2,7 +2,7 @@ from elapi.api import FixedEndpoint
 
 _ENDPOINT_MAP = {
     "resources": "items",
-    "category": "items_types",
+    "categories": "items_types",
     "experiments": "experiments",
 }
 

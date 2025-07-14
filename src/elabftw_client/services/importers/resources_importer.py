@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Union
+from typing import Union, Optional
 
 import pandas as pd
 
@@ -14,18 +14,16 @@ class ResourcesImporter(BaseImporter):
 
     def __init__(self) -> None:
         self._res_endpoint = get_fixed("resources")
-        self._cat_endpoint = get_fixed("category")
+        self._cat_endpoint = get_fixed("categories")
 
-    def create_new(self, csv_path: Union[Path, str], category_id: int) -> int:
+    def create_new(self, category_id : int = None, csv_path: Optional[Union[Path, str]] = None) -> int:
 
         new_resources = 0
-        IDValidator("category", category_id).validate()
+        IDValidator("categories", category_id).validate()
 
-        enc = CsvTools.detect_file_encoding(path=csv_path)
-        delimiter = CsvTools.detect_delimiter(path=csv_path, encoding=enc)
-        df = pd.read_csv(csv_path, encoding=enc, sep=delimiter)
+        resources_df = CsvTools.csv_to_df(csv_path)
 
-        for index, row in df.iterrows():
+        for index, row in resources_df.iterrows():
             new_resource = self._res_endpoint
 
             data = {"title": row["title"], "template": category_id}
@@ -34,8 +32,10 @@ class ResourcesImporter(BaseImporter):
 
             if post.status_code == 201:
                 new_resources += 1
+                id = post.headers.get("location").split("/")[-1]
+            else:
+                id = None
 
-            id = post.headers.get("location").split("/")[-1]
 
         return new_resources
 

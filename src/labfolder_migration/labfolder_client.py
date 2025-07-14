@@ -1,18 +1,12 @@
-from typing import Any, Dict, List
-from urllib.parse import urljoin
+from typing import Any, Dict, List, Optional
 
 import requests
 
 
-class Labfolder:
+class LabfolderClient:
     """Client for Labfolder v2 API."""
 
-    def __init__(
-        self,
-        email: str,
-        password: str,
-        base_url: str = "https://labfolder.labforward.app/api/v2",
-    ):
+    def __init__(self, email: str, password: str, base_url: str):
 
         self.email = email
 
@@ -31,10 +25,10 @@ class Labfolder:
             }
         )
 
-    def login(self) -> str:
+    def login(self) -> Optional[str]:
         """Authenticate and store bearer token."""
 
-        url = f"{self.base_url}/login"
+        url = f"{self.base_url}/auth/login"
 
         resp = self._session.post(
             url, json={"user": self.email, "password": self.password}
@@ -46,7 +40,9 @@ class Labfolder:
 
         except requests.HTTPError as e:
 
-            raise RuntimeError(f"Login failed ({resp.status_code}): {resp.text}") from e
+            raise RuntimeError(
+                f"Login failed ({resp.status_code}): {resp.text}"
+            ) from e
 
         token = resp.json().get("token")
 
@@ -55,7 +51,9 @@ class Labfolder:
 
         self._token = token.strip()
 
-        self._session.headers.update({"Authorization": f"Bearer {self._token}"})
+        self._session.headers.update(
+            {"Authorization": f"Bearer {self._token}"}
+        )
 
         return self._token
 
@@ -90,13 +88,15 @@ class Labfolder:
                 "include_hidden": include_hidden,
             }
 
-            resp = self._session.get(f"{self.base_url}/projects", params=params)
+            resp = self._session.get(
+                f"{self.base_url}/projects", params=params
+            )
 
             resp.raise_for_status()
 
             data = resp.json()
 
-            batch = data.get("data", data)
+            batch = data
 
             if not isinstance(batch, list):
                 raise RuntimeError(f"Unexpected projects format: {data!r}")
@@ -110,7 +110,7 @@ class Labfolder:
 
         return projects
 
-    def get_project_entries(self) -> List[Dict[str, Any]]:
+    def get_project_data(self) -> List[Dict[str, Any]]:
         """Fetch all entries across all projects."""
 
         entries: List[Dict[str, Any]] = []
@@ -119,44 +119,11 @@ class Labfolder:
             proj_id = proj["id"]
 
             resp = self._session.get(
-                f"{self.base_url}/entries", params={"project_ids": proj_id}
+                f"{self.base_url}/entries", params={"project_ids": proj_id,
+                                                    "expand": "author,last_editor"}
             )
-
             resp.raise_for_status()
 
             entries.extend(resp.json())
 
         return entries
-
-    def get_entries(self) -> List:
-
-        entries = []
-
-        project_entries = self.get_project_entries()
-
-        for project in project_entries:
-
-            for entry in project_entries[project]:
-                entry_id = entry["id"]
-
-                entry_url = urljoin(self.base_url, f"entries/{entry_id}")
-
-                req = requests.get(entry_url, headers=self._session.headers)
-
-                req_json = req.json()
-
-                print(req_json["id"])
-
-                entries.append(req_json)
-
-        return entries
-
-    def __enter__(self):
-
-        self.login()
-
-        return self
-
-    def __exit__(self, *args):
-
-        self.logout()

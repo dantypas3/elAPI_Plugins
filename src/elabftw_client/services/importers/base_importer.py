@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Union
+from typing import Union, Optional
 
 
 class BaseImporter(ABC):
@@ -9,8 +9,8 @@ class BaseImporter(ABC):
     @abstractmethod
     def create_new(
         self,
-        csv_path: Union[Path, str],
-        category_id: int,
+        category_id: Optional[int] = None,
+        csv_path: Optional[Union[Path, str]] = None,
     ) -> int:
         """Abstract method to create new resources
         or experiments(post) from a csv."""
@@ -19,7 +19,7 @@ class BaseImporter(ABC):
     def update_existing(
         self,
         csv_path: Union[Path, str],
-        category_id: int,
+        category_id: Optional[int],
         encoding: str = "utf-8",
         separator: str = ";",
     ) -> int:

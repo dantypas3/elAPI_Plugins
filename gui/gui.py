@@ -29,7 +29,7 @@ app.config["UPLOAD_FOLDER"] = UPLOAD_DIR
 
 @app.route("/", methods=["GET", "POST"])
 def index() -> Union[str, WerkzeugResponse]:
-    categories = endpoints.get_fixed("category").get().json()
+    categories = endpoints.get_fixed("categories").get().json()
     categories = sorted(categories, key=lambda c: c.get("title", "").lower())
 
     if request.method == "POST":
@@ -49,7 +49,7 @@ def index() -> Union[str, WerkzeugResponse]:
             return send_file(path, as_attachment=True)
 
         elif action == "imports":
-            cid = int(request.form["category"])
+            cid = int(request.form["categor"])
             import_path = request.form.get("import_path", "").strip()
 
             if import_path:
