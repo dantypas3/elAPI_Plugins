@@ -15,3 +15,5 @@ __pycache__/
 *.sqlite3
 test_main.py
 docs/
+*.egg-info/
+*.parquet
