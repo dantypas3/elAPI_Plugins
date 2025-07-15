@@ -1,6 +1,7 @@
-from typing import Tuple
+from typing import Any, Dict, List, Optional
 
-from .labfolder_client import LabfolderClient
+from labfolder_migration import LabfolderClient
+
 
 class LabFolderExtractor:
     """
@@ -16,15 +17,70 @@ class LabFolderExtractor:
         self._client = LabfolderClient(email, password, base_url)
         self._client.login()
 
+    def get_projects(
+        self, limit: int = 100, include_hidden: bool = True
+    ) -> List[Dict[str, Any]]:
+        """Fetch all projects, handling pagination."""
 
-    def get_raw_entries(self) -> Tuple[list, list, list]:
+        projects: List[Dict[str, Any]] = []
+        offset: int = 0
+        while True:
 
-        client = self._client
-        print("raw_experiments")
-        raw_experiments = self._client.get_projects(limit=100)
-        print("raw_experiment_entries")
-        raw_experiment_entries = self._client.get_project_data()
-        print("raw_experiments_content")
-        raw_experiments_content = self._client.get_notebook_entries_content()
+            params = {
+                "limit": limit,
+                "offset": offset,
+                "include_hidden": include_hidden,
+            }
 
-        return raw_experiments, raw_experiment_entries, raw_experiments_content
+            resp = self._client.get("projects", params=params)
+
+            resp.raise_for_status()
+            data = resp.json()
+            batch = data
+
+            if not isinstance(batch, list):
+                raise RuntimeError(f"Unexpected projects format: {data}")
+
+            projects.extend(batch)
+
+            if len(batch) < limit:
+                break
+
+            offset += limit
+
+        return projects
+    def get_project_entries(
+        self,
+        expand: Optional[List[str]] = None,
+        limit: int = 50,
+        include_hidden: bool = True,
+    ) -> List[Dict[str, Any]]:
+        """Fetch all entries across all projects with optional expansions."""
+        project_entries: List[Dict[str, Any]] = []
+        offset = 0
+
+        # Build expand string only if provided
+        expand_str = ' '.join(expand) if expand else None
+
+        while True:
+            params: Dict[str, Any] = {
+                "limit": limit,
+                "offset": offset,
+                "include_hidden": include_hidden,
+            }
+            if expand_str:
+                params["expand"] = expand_str
+
+            response = self._client.get("entries", params=params)
+            batch = response.json()
+
+            if not isinstance(batch, list):
+                raise RuntimeError(f"Unexpected entries format: {batch!r}")
+
+            project_entries.extend(batch)
+            if len(batch) < limit:
+                break
+
+            offset += limit
+
+        return project_entries

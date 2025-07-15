@@ -1,6 +1,6 @@
 from typing import Callable, Dict
 
-from src.elabftw_client.services.importers import BaseImporter, ResourcesImporter, ExperimentsImporter
+from elabftw_client.services.importers import BaseImporter, ResourcesImporter, ExperimentsImporter
 from labfolder_migration.coordinator import MigrationCoordinator
 
 

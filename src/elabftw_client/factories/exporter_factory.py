@@ -1,10 +1,12 @@
 from typing import Callable, Dict, Optional
 
-from src.elabftw_client.services.exporters import ExperimentsExporter, ResourceExporter
-from src.elabftw_client.services.exporters.base_exporter import BaseExporter
+from elabftw_client.services.exporters import ExperimentsExporter, ResourceExporter
+from elabftw_client.services.exporters.base_exporter import BaseExporter
 
 
 class ExporterFactory:
+
+    """ExporterFactory is responsible for exporting structured data into eLabFTW-compatible formats."""
     _exporters: Dict[str, Callable[..., BaseExporter]] = {
         "resources": ResourceExporter,
         "experiments": ExperimentsExporter,
@@ -12,6 +14,7 @@ class ExporterFactory:
 
     @classmethod
     def get_exporter(cls, name: str, obj_id: Optional[int] = None) -> BaseExporter:
+        """Call the needed exporter."""
         exporter_cls = cls._exporters.get(name)
         if exporter_cls is None:
             raise ValueError(f"No exporter configured for '{name}'")

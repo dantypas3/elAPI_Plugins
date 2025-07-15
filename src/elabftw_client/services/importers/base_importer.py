@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Union, Optional
 
-
 class BaseImporter(ABC):
     """Abstract base class for resource and experiment importers."""
 

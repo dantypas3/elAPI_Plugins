@@ -1,8 +1,10 @@
 beautifulsoup4==4.13.4
-chardet==4.0.0
 chardet==5.2.0
 elapi==2.3.3
 Flask==3.1.1
+numpy==2.3.1
 pandas==2.3.1
+pytest==8.4.1
 Requests==2.32.4
+responses==0.25.7
 Werkzeug==3.1.3

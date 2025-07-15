@@ -1,9 +1,11 @@
-from typing import Any, Dict, List, Optional
 from collections import defaultdict
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+import numpy as np
+import requests
 
 from src.elabftw_client.utils.endpoints import get_fixed
-import requests
-import numpy as np
 
 
 class LabfolderClient:
@@ -17,9 +19,9 @@ class LabfolderClient:
 
         self.base_url = base_url.rstrip("/")
 
-        self._token = None
-
         self._session = requests.Session()
+
+        self._token = None
 
         self._session.headers.update(
             {
@@ -43,9 +45,7 @@ class LabfolderClient:
 
         except requests.HTTPError as e:
 
-            raise RuntimeError(
-                f"Login failed ({resp.status_code}): {resp.text}"
-            ) from e
+            raise RuntimeError(f"Login failed ({resp.status_code}): {resp.text}") from e
 
         token = resp.json().get("token")
 
@@ -54,9 +54,7 @@ class LabfolderClient:
 
         self._token = token.strip()
 
-        self._session.headers.update(
-            {"Authorization": f"Bearer {self._token}"}
-        )
+        self._session.headers.update({"Authorization": f"Bearer {self._token}"})
 
         return self._token
 
@@ -74,62 +72,15 @@ class LabfolderClient:
 
         self._session.headers.pop("Authorization", None)
 
-    def get_projects(
-        self, limit: int = 100, include_hidden: bool = True
-    ) -> List[Dict[str, Any]]:
-        """Fetch all projects, handling pagination."""
+    def get(
+        self, endpoint: str, params: Optional[Dict[str, Any]] = None
+    ) -> requests.Response:
+        """Perform a GET request to the given API endpoint."""
 
-        projects: List[Dict[str, Any]] = []
-
-        offset = 0
-
-        while True:
-
-            params = {
-                "limit": limit,
-                "offset": offset,
-                "include_hidden": include_hidden,
-            }
-
-            resp = self._session.get(
-                f"{self.base_url}/projects", params=params
-            )
-
-            resp.raise_for_status()
-
-            data = resp.json()
-
-            batch = data
-
-            if not isinstance(batch, list):
-                raise RuntimeError(f"Unexpected projects format: {data!r}")
-
-            projects.extend(batch)
-
-            if len(batch) < limit:
-                break
-
-            offset += limit
-
-        return projects
-
-    def get_project_data(self) -> List[Dict[str, Any]]:
-        """Fetch all entries across all projects."""
-
-        entries: List[Dict[str, Any]] = []
-
-        for proj in self.get_projects():
-            proj_id = proj["id"]
-
-            resp = self._session.get(
-                f"{self.base_url}/entries", params={"project_ids": proj_id,
-                                                    "expand": "author,last_editor"}
-            )
-            resp.raise_for_status()
-
-            entries.extend(resp.json())
-
-        return entries
+        url = f"{self.base_url}/{endpoint}"
+        response = self._session.get(url, params=params)
+        response.raise_for_status()
+        return response
 
     def get_project_elements(self, df) -> Dict[Any, List[Dict[str, Any]]]:
         """
@@ -143,20 +94,22 @@ class LabfolderClient:
                 "project_creation_date": row.get("creation_date"),
                 "entry_number": row.get("entry_number"),
                 "total_entries": row.get("number_of_entries"),
-                "tags": row.get("tags"),
+                "tags": row.get("tags").tolist(),
                 "entry_title": row.get("title_y"),
                 "project_title": row.get("title_x"),
                 "name": f"{row.get('author.first_name')} {row.get('author.last_name')}",
                 "folder_id": row.get("folder_id"),
                 "group_id": row.get("group_id"),
                 "last_edited": row.get("version_date"),
-                "created": row.get("creation_date"),
+                "created": row.get("creation_date_x"),
             }
-            experiment_data[row.get("project_id")].append(record)
+            experiment_data[row["id_y"]].append(record)
 
         return experiment_data
 
-    def get_text(self, project_data: Dict[Any, List[Dict[str, Any]]]) -> List[str]:
+    def get_entry_content(
+        self, project_data: Dict[Any, List[Dict[str, Any]]]
+    ) -> List[str]:
         """
         Build one experiment per project, patch its body & category,
         THEN add tags via POST /experiments/{id}/tags.
@@ -170,53 +123,39 @@ class LabfolderClient:
         projects_checked = 0
 
         for project_id, records in project_data.items():
-            # ── sort & basic info ──────────────────────────────────────────────
+
             records.sort(key=lambda r: r.get("entry_number", 0))
             first = records[0]
             project_title = first.get("project_title", "Untitled Project")
 
-            # ── create empty experiment ───────────────────────────────────────
-            post_resp = get_fixed("experiments").post(data={"title": project_title})
+            post_resp = get_fixed("experiments").post(
+                data={
+                    "title": project_title,
+                    "tags": first.get("tags"),
+                }
+            )
             exp_id = post_resp.headers.get("location").split("/")[-1]
 
             body_parts: List[str] = []
 
-            # ── collect tags for this project (ensure JSON-safe list[str]) ────
-            tags_payload: List[str] = []
             for rec in records:
-                raw = rec.get("tags")
-                if raw is None or (isinstance(raw, float) and np.isnan(raw)):
-                    continue
-                if isinstance(raw, np.ndarray):
-                    raw = raw.tolist()
-                if isinstance(raw, str):
-                    # split comma-joined strings if you use them
-                    raw = [t.strip() for t in raw.split(",") if t.strip()]
-                if isinstance(raw, (list, tuple)):
-                    tags_payload.extend(raw)
 
-            # de-dupe while preserving order
-            tags_payload = list(dict.fromkeys(tags_payload))
-
-            # ── build every entry block ───────────────────────────────────────
-            for rec in records:
                 header = (
                     f"\n----Entry {rec.get('entry_number')} "
                     f"of {rec.get('total_entries')}----<br>"
                     f"<strong>Entry: {rec.get('entry_title')}</strong><br>"
                 )
 
-                # fetch each TEXT element
                 content_blocks: List[str] = []
+
                 for element in rec.get("elements", []):
                     if element and element.get("type") == "TEXT":
-                        url = f"{self.base_url}/elements/text/{element.get('id')}"
-                        resp = self._session.get(url)
-                        resp.raise_for_status()
-                        content_blocks.append(resp.json().get("content", ""))
+                        content_blocks.append(self.get_text(element))
 
-                timestamp = rec.get("last_edited") or rec.get("created")
-                created_line = f"Created: {timestamp}<br>"
+                date = rec.get("created")
+                dt = datetime.strptime(date, "%Y-%m-%dT%H:%M:%S.%f%z")
+                date = dt.date().isoformat()
+                created_line = f"Created: {date}<br>"
                 divider = "<hr><hr>"
 
                 entry_html = header
@@ -227,7 +166,6 @@ class LabfolderClient:
                 body_parts.append(entry_html)
                 texts.append(entry_html)
 
-            # ── right-aligned metadata once per experiment ────────────────────
             metadata_html = (
                 '<div style="text-align: right; margin-top: 20px;">'
                 f"Labfolder folder_id: {first.get('folder_id')}<br>"
@@ -236,21 +174,17 @@ class LabfolderClient:
                 f"Created: {first.get('created')}<br>"
                 f"Author: {first.get('name')}<br>"
                 f"Last edited: {first.get('last_edited')}<br>"
-                "TODO: Elab-ID jeder Person einfügen,<br> Extra-Felder noch,  "
-                "besprechen<br>"
                 "</div>"
             )
             body_parts.append(metadata_html)
 
             # ── patch the full body & category (no tags here!) ────────────────
             get_fixed("experiments").patch(
-                    endpoint_id=exp_id,
-                    data={
-                        "body": "".join(body_parts),
-                        "category": 38,
-                        "tags" : tags_payload,
-                        "fullname": first.get('name')
-                    },
+                endpoint_id=exp_id,
+                data={
+                    "body": "".join(body_parts),
+                    "category": 38,
+                },
             )
 
             projects_checked += 1
@@ -258,3 +192,10 @@ class LabfolderClient:
                 break
 
         return texts
+
+    def get_text(self, element):
+        url = f"{self.base_url}/elements/text/{element.get('id')}"
+        resp = self._session.get(url)
+        resp.raise_for_status()
+
+        return resp.json().get("content", "")

@@ -3,9 +3,9 @@ from typing import Union, Optional
 
 import pandas as pd
 
-from src.elabftw_client.utils.csv_tools import CsvTools
-from src.elabftw_client.utils.endpoints import get_fixed
-from src.elabftw_client.utils.validators import IDValidator
+from elabftw_client.utils.csv_tools import CsvTools
+from elabftw_client.utils.endpoints import get_fixed
+from elabftw_client.utils.validators import IDValidator
 
 from .base_importer import BaseImporter
 

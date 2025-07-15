@@ -6,9 +6,9 @@ from typing import Optional
 import pandas as pd
 from werkzeug.utils import secure_filename
 
-from src.elabftw_client.utils.content_extraction import strip_html
-from src.elabftw_client.utils.endpoints import get_fixed
-from src.elabftw_client.utils.validators import IDValidator
+from elabftw_client.utils.content_extraction import strip_html
+from elabftw_client.utils.endpoints import get_fixed
+from elabftw_client.utils.validators import IDValidator
 
 from .base_exporter import BaseExporter
 
