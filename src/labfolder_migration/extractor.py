@@ -49,6 +49,7 @@ class LabFolderExtractor:
             offset += limit
 
         return projects
+
     def get_project_entries(
         self,
         expand: Optional[List[str]] = None,
@@ -59,7 +60,6 @@ class LabFolderExtractor:
         project_entries: List[Dict[str, Any]] = []
         offset = 0
 
-        # Build expand string only if provided
         expand_str = ' '.join(expand) if expand else None
 
         while True:
@@ -84,3 +84,4 @@ class LabFolderExtractor:
             offset += limit
 
         return project_entries
+

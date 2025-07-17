@@ -27,6 +27,12 @@ if [ -f requirements.txt ]; then
   pip install -r requirements.txt
 fi
 
+# Install your local elapi-plugins package
+if [ -f pyproject.toml ]; then
+  echo "Installing local elapi-plugins package…"
+  pip install .
+fi
+
 CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}"
 CONFIG_FILE="$CONFIG_DIR/elapi.yml"
 mkdir -p "$CONFIG_DIR"
