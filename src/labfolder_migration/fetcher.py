@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Optional
 from labfolder_migration import LabfolderClient
 
 
-class LabFolderExtractor:
+class LabFolderFetcher:
     """
     Wraps your Labfolder client to fetch raw entries.
     """
@@ -17,42 +17,9 @@ class LabFolderExtractor:
         self._client = LabfolderClient(email, password, base_url)
         self._client.login()
 
-    def get_projects(
-        self, limit: int = 100, include_hidden: bool = True
-    ) -> List[Dict[str, Any]]:
-        """Fetch all projects, handling pagination."""
-
-        projects: List[Dict[str, Any]] = []
-        offset: int = 0
-        while True:
-
-            params = {
-                "limit": limit,
-                "offset": offset,
-                "include_hidden": include_hidden,
-            }
-
-            resp = self._client.get("projects", params=params)
-
-            resp.raise_for_status()
-            data = resp.json()
-            batch = data
-
-            if not isinstance(batch, list):
-                raise RuntimeError(f"Unexpected projects format: {data}")
-
-            projects.extend(batch)
-
-            if len(batch) < limit:
-                break
-
-            offset += limit
-
-        return projects
-
-    def get_project_entries(
+    def fetch_entries(
         self,
-        expand: Optional[List[str]] = None,
+        expand = None,
         limit: int = 50,
         include_hidden: bool = True,
     ) -> List[Dict[str, Any]]:
@@ -60,7 +27,7 @@ class LabFolderExtractor:
         project_entries: List[Dict[str, Any]] = []
         offset = 0
 
-        expand_str = ' '.join(expand) if expand else None
+        expand_str = ','.join(expand) if expand else None
 
         while True:
             params: Dict[str, Any] = {
@@ -85,3 +52,7 @@ class LabFolderExtractor:
 
         return project_entries
 
+
+    def fetch_text(self, element):
+        text_response = self._client.get("elements/test", params=element.get("id"))
+        return text_response.json().get("content", "")
