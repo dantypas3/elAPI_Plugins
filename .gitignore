@@ -17,3 +17,4 @@ test_main.py
 docs/
 *.egg-info/
 *.parquet
+*toml

@@ -1,11 +1,6 @@
-from collections import defaultdict
-from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
-import numpy as np
 import requests
-
-from src.elabftw_client.utils.endpoints import get_fixed
 
 
 class LabfolderClient:
@@ -45,7 +40,9 @@ class LabfolderClient:
 
         except requests.HTTPError as e:
 
-            raise RuntimeError(f"Login failed ({resp.status_code}): {resp.text}") from e
+            raise RuntimeError(
+                f"Login failed ({resp.status_code}):" f" {resp.text}"
+            ) from e
 
         token = resp.json().get("token")
 
@@ -54,7 +51,9 @@ class LabfolderClient:
 
         self._token = token.strip()
 
-        self._session.headers.update({"Authorization": f"Bearer {self._token}"})
+        self._session.headers.update(
+            {"Authorization": f"Bearer" f" {self._token}"}
+        )
 
         return self._token
 
