@@ -5,7 +5,8 @@ import time
 import webbrowser
 from typing import Tuple, Union
 
-from flask import Flask, flash, redirect, render_template, request, send_file, url_for
+from flask import Flask, flash, redirect, render_template, request, send_file, \
+    url_for
 from werkzeug.serving import make_server
 from werkzeug.utils import secure_filename
 from werkzeug.wrappers.response import Response as WerkzeugResponse
@@ -18,7 +19,6 @@ TEMPLATE_DIR = os.path.join(SCRIPT_DIR, "templates")
 if SCRIPT_DIR not in sys.path:
     sys.path.insert(0, SCRIPT_DIR)
 
-
 app = Flask(__name__, template_folder=TEMPLATE_DIR)
 app.secret_key = os.urandom(24)
 
@@ -28,7 +28,7 @@ app.config["UPLOAD_FOLDER"] = UPLOAD_DIR
 
 
 @app.route("/", methods=["GET", "POST"])
-def index() -> Union[str, WerkzeugResponse]:
+def index () -> Union[str, WerkzeugResponse]:
     categories = endpoints.get_fixed("categories").get().json()
     categories = sorted(categories, key=lambda c: c.get("title", "").lower())
 
@@ -49,7 +49,7 @@ def index() -> Union[str, WerkzeugResponse]:
             return send_file(path, as_attachment=True)
 
         elif action == "imports":
-            cid = int(request.form["categor"])
+            cid = int(request.form["category"])
             import_path = request.form.get("import_path", "").strip()
 
             if import_path:
@@ -70,7 +70,8 @@ def index() -> Union[str, WerkzeugResponse]:
 
             try:
                 importer = ImporterFactory.get_importer("resources")
-                count = importer.create_new(csv_path=full_path, category_id=cid)
+                count = importer.create_new(csv_path=full_path,
+                                            category_id=cid)
                 flash(f"Imported {count} resources from {source}", "success")
             except Exception as e:
                 flash(f"Import failed: {e}", "error")
@@ -85,11 +86,11 @@ def index() -> Union[str, WerkzeugResponse]:
 
 
 @app.route("/shutdown", methods=["POST"])
-def shutdown() -> Tuple[str, int]:
+def shutdown () -> Tuple[str, int]:
     return "OK", 200
 
 
-def _open_browser() -> None:
+def _open_browser () -> None:
     time.sleep(1)
     webbrowser.open("http://127.0.0.1:5000")
 
