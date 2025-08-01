@@ -16,7 +16,7 @@ class ExperimentsExporter(BaseExporter):
         self._endpoint = get_fixed("experiments")
 
     def xlsx_export (self, export_file: Optional[str] = None) -> Path:
-        experiments = self._endpoint.get().json()
+        experiments = self._endpoint.get(query={"limit" : 1000}).json()
         df = pd.json_normalize(experiments)
 
         cols_to_drop = ["userid", "created_at", "state", "content_type",

@@ -21,7 +21,9 @@ class ResourceExporter(BaseExporter):
     def xlsx_export(self, export_file: Optional[str] = None) -> Path:
         IDValidator("categories", self._category_id).validate()
 
-        resources = self._endpoint.get(query={"cat": self._category_id}).json()
+        resources = self._endpoint.get(query={"cat": self._category_id,
+                                            "limit": 1000},
+                                       ).json()
         df = pd.json_normalize(resources)
 
         cols_to_drop = [

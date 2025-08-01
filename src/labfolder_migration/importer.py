@@ -50,13 +50,11 @@ class Importer:
         else:
             metadata = raw_meta
 
-        # 2) keep or default the elabftw block
         elab_meta = metadata.get("elabftw", {
             "display_main_text"  : True,
             "extra_fields_groups": []
             })
 
-        # 3) build an 'extra_fields' dict of simple strings
         ef_payload: Dict[str, Any] = {}
         if extra_fields:
             for k, v in extra_fields.items():
@@ -66,19 +64,17 @@ class Importer:
                     "group_id"   : 0,
                     "description": "",
                     }
-            # ensure group 0 is present
+
             groups = set(elab_meta.get("extra_fields_groups", []))
             groups.add(0)
             elab_meta["extra_fields_groups"] = sorted(groups)
 
-        # 4) assemble the full metadata object
         new_meta: Dict[str, Any] = {
             "elabftw": elab_meta
             }
         if ef_payload:
             new_meta["extra_fields"] = ef_payload
 
-        # 5) now PATCH using exactly the same shape your CSV script did:
         payload: Dict[str, Any] = {
             "body"    : body,
             "category": category,  # serialize metadata to JSON-string
