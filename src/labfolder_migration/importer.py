@@ -38,10 +38,8 @@ class Importer:
 
         ep = get_fixed("experiments")
 
-        # 1) fetch current to preserve existing metadata.elabftw
         current = ep.get(endpoint_id=exp_id).json()
         raw_meta = current.get("metadata") or {}
-        # if metadata came back as string, parse it
         if isinstance(raw_meta, str):
             try:
                 metadata = json.loads(raw_meta)
@@ -50,13 +48,11 @@ class Importer:
         else:
             metadata = raw_meta
 
-        # 2) keep or default the elabftw block
         elab_meta = metadata.get("elabftw", {
             "display_main_text"  : True,
             "extra_fields_groups": []
             })
 
-        # 3) build an 'extra_fields' dict of simple strings
         ef_payload: Dict[str, Any] = {}
         if extra_fields:
             for k, v in extra_fields.items():
@@ -66,22 +62,19 @@ class Importer:
                     "group_id"   : 0,
                     "description": "",
                     }
-            # ensure group 0 is present
             groups = set(elab_meta.get("extra_fields_groups", []))
             groups.add(0)
             elab_meta["extra_fields_groups"] = sorted(groups)
 
-        # 4) assemble the full metadata object
         new_meta: Dict[str, Any] = {
             "elabftw": elab_meta
             }
         if ef_payload:
             new_meta["extra_fields"] = ef_payload
 
-        # 5) now PATCH using exactly the same shape your CSV script did:
         payload: Dict[str, Any] = {
             "body"    : body,
-            "category": category,  # serialize metadata to JSON-string
+            "category": category,
             "metadata": json.dumps(new_meta),
             "userid"  : uid,
             }
