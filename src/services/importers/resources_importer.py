@@ -1,14 +1,15 @@
 import json
 import math
-import numpy as np
 import warnings
 from datetime import datetime
 from pathlib import Path
 from typing import Union, List, Dict, Any
 
-from src.elabftw_client.utils.csv_tools import CsvTools
-from src.elabftw_client.utils.endpoints import get_fixed
-from src.elabftw_client.utils.validators import IDValidator
+import numpy as np
+
+from utils.csv_tools import CsvTools
+from utils.endpoints import get_fixed
+from utils.validators import IDValidator
 from .base_importer import BaseImporter
 
 
@@ -18,8 +19,7 @@ class ResourcesImporter(BaseImporter):
         self._endpoint = get_fixed("resources")
 
     def import_resources (self, csv_path: Union[Path, str],
-                          category_id: int = None,
-                          is_new: bool = True) -> int:
+                          category_id: int = None, is_new: bool = True) -> int:
 
         new_resources = 0
 
@@ -30,9 +30,9 @@ class ResourcesImporter(BaseImporter):
         for _, row in resources_df.iterrows():
             new_resource = self._endpoint
 
-            resource :Dict[str, Any] = {}
-            resource_id : int
-            tags : List[str] = []
+            resource: Dict[str, Any] = {}
+            resource_id: int
+            tags: List[str] = []
 
             if is_new:
 
@@ -47,15 +47,16 @@ class ResourcesImporter(BaseImporter):
                         tags.extend(tag_list)
 
                 data = {
-                    "title"     : row["title"],
-                    "template"  : category_id,
-                    "tags"      : tags
+                    "title"   : row["title"],
+                    "template": category_id,
+                    "tags"    : tags
                     }
 
                 resp = new_resource.post(data=data)
 
-                location = (resp.headers.get("Location", "") or
-                            resp.headers.get("location", ""))
+                location = (resp.headers.get("Location",
+                                             "") or resp.headers.get(
+                    "location", ""))
 
                 new_resource_id = location.rstrip("/").split("/")[-1]
 
@@ -99,8 +100,7 @@ class ResourcesImporter(BaseImporter):
             extra_fields = metadata.get("extra_fields", {})
             known_fields = {"resource_id", "title", "body"}
             unexpected_columns = [col for col in resources_df.columns if
-                                  col not in extra_fields and col not in
-                                  known_fields]
+                                  col not in extra_fields and col not in known_fields]
 
             if unexpected_columns:
                 warnings.warn(
@@ -116,13 +116,13 @@ class ResourcesImporter(BaseImporter):
                             isinstance(value, float) and math.isnan(value)):
                         value = ""
                     metadata["extra_fields"][field]["value"] = str(value)
-                    print(
-                        f"Field '{field}' updated to: "
-                        f"{metadata['extra_fields'][field]['value']}")
+                    print(f"Field '{field}' updated to: "
+                          f"{metadata['extra_fields'][field]['value']}")
                 else:
                     print(f"Field '{field}' not found in CSV. Skipping.")
 
-            patch_response = new_resource.patch(endpoint_id=row['id'], data=resource)
+            patch_response = new_resource.patch(endpoint_id=row['id'],
+                                                data=resource)
 
             if patch_response.status_code == 200:
                 print(f"Patch of resource {row['id']} complete")

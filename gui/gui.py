@@ -11,8 +11,8 @@ from werkzeug.serving import make_server
 from werkzeug.utils import secure_filename
 from werkzeug.wrappers.response import Response as WerkzeugResponse
 
-from src.elabftw_client.factories import ExporterFactory, ImporterFactory
-from src.elabftw_client.utils import endpoints
+from factories import ExporterFactory, ImporterFactory
+from utils import endpoints
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 TEMPLATE_DIR = os.path.join(SCRIPT_DIR, "templates")
