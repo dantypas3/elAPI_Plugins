@@ -1,16 +1,14 @@
 from typing import Callable, Dict
 
-from labfolder_migration.coordinator import MigrationCoordinator
-
-from services.importers import BaseImporter, ResourcesImporter, \
-    ExperimentsImporter
+from src.services.importers.base_importer import BaseImporter
+from src.services.importers.experiments_importer import ExperimentsImporter
+from src.services.importers.resources_importer import ResourcesImporter
 
 
 class ImporterFactory:
     _importers: Dict[str, Callable[..., BaseImporter]] = {
         "resources"  : ResourcesImporter,
         "experiments": ExperimentsImporter,
-        "labfolder"  : MigrationCoordinator
         }
 
     @classmethod

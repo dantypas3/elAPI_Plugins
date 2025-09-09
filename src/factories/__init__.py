@@ -1,4 +1,4 @@
-from factories.exporter_factory import ExporterFactory
-from factories.importer_factory import ImporterFactory
+from .exporter_factory import ExporterFactory
+from .importer_factory import ImporterFactory
 
 __all__ = ["ExporterFactory", "ImporterFactory"]
