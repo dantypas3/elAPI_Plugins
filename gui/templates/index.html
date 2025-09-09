@@ -15,13 +15,22 @@
 
     <!-- Tabs -->
     <div class="tabs">
-        <div id="tab-cat" class="tab-button active">Resources</div>
-        <div id="tab-exp" class="tab-button">Experiments</div>
-        <div id="tab-imp" class="tab-button">Imports</div>
+        <div id="btn-export" class="tab-button active">Export</div>
+        <div id="btn-import" class="tab-button">Import</div>
     </div>
 
-    <!-- Tab Panes -->
-    <div class="tab-content">
+    <div id="export-options" class="tab-content">
+        <div id="tab-export-res" class="sub-tab-button active">Resources</div>
+        <div id="tab-export-exp" class="sub-tab-button">Experiments</div>
+    </div>
+
+    <div id="import-options" class="tab-content" style="display:none;">
+        <div id="tab-import-res" class="sub-tab-button active">Resources</div>
+        <div id="tab-import-exp" class="sub-tab-button">Experiments</div>
+    </div>
+
+    <!-- Tab Panels -->
+    <div class="tab-panels">
         <!-- Resources Export -->
         <div id="content-cat" class="active">
             <form method="post">
@@ -52,6 +61,9 @@
 
         <!-- Imports -->
         <div id="content-imp">
+            <div class="disclaimer">
+                ⚠️ Import functionality is under development!
+            </div>
             <form method="post" enctype="multipart/form-data">
                 <input type="hidden" name="export_type" value="imports">
 
@@ -97,24 +109,66 @@
 </footer>
 
 <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const tabs = {
-            'cat': {tab: 'tab-cat', pane: 'content-cat'},
-            'exp': {tab: 'tab-exp', pane: 'content-exp'},
-            'imp': {tab: 'tab-imp', pane: 'content-imp'}
+    document.addEventListener("DOMContentLoaded", () => {
+        const btnExport = document.getElementById("btn-export");
+        const btnImport = document.getElementById("btn-import");
+        const exportOpts = document.getElementById("export-options");
+        const importOpts = document.getElementById("import-options");
+
+        const panels = {
+            "tab-export-res": "content-cat",
+            "tab-export-exp": "content-exp",
+            "tab-import-res": "content-imp",
+            "tab-import-exp": "content-imp" // if you later split imports, change this
         };
 
-        Object.values(tabs).forEach(({tab, pane}) => {
-            document.getElementById(tab).addEventListener('click', () => {
-                Object.values(tabs).forEach(({tab, pane}) => {
-                    document.getElementById(tab).classList.remove('active');
-                    document.getElementById(pane).classList.remove('active');
-                });
-                document.getElementById(tab).classList.add('active');
-                document.getElementById(pane).classList.add('active');
+        // Main toggle (Export / Import)
+        btnExport.addEventListener("click", () => {
+            btnExport.classList.add("active");
+            btnImport.classList.remove("active");
+            exportOpts.style.display = "flex";
+            importOpts.style.display = "none";
+
+            // default show resources export
+            switchPanel("tab-export-res");
+        });
+
+        btnImport.addEventListener("click", () => {
+            btnImport.classList.add("active");
+            btnExport.classList.remove("active");
+            exportOpts.style.display = "none";
+            importOpts.style.display = "flex";
+
+            // default show resources import
+            switchPanel("tab-import-res");
+        });
+
+        // Sub-tab buttons
+        Object.keys(panels).forEach(tabId => {
+            document.getElementById(tabId).addEventListener("click", () => {
+                switchPanel(tabId);
             });
         });
+
+        function switchPanel(tabId) {
+            // deactivate all sub-tabs and panels
+            Object.keys(panels).forEach(id => {
+                document.getElementById(id).classList.remove("active");
+                document.getElementById(panels[id]).classList.remove("active");
+                document.getElementById(panels[id]).style.display = "none";
+            });
+
+            // activate selected sub-tab and panel
+            document.getElementById(tabId).classList.add("active");
+            const panelId = panels[tabId];
+            document.getElementById(panelId).classList.add("active");
+            document.getElementById(panelId).style.display = "block";
+        }
+
+        // Initialize default view
+        switchPanel("tab-export-res");
     });
 </script>
+
 </body>
 </html>
