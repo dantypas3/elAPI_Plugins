@@ -91,7 +91,7 @@ If you're not familiar with the command line, follow these steps:
 4. **Confirm You’re in the Right Folder**  
    **macOS/Linux**
    ```bash
-        ls
+      ls
      ```
    **Windows**
     ```bash
