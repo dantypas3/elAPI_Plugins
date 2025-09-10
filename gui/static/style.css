@@ -223,7 +223,6 @@ label {
 }
 
 input[type="text"],
-input[type="file"],
 select {
     width: 100%;
     appearance: none;
@@ -242,6 +241,35 @@ input[type="file"]:focus,
 select:focus {
     outline: none;
     border-color: var(--accent-600);
+    box-shadow: 0 0 0 4px var(--ring);
+}
+
+input[type="file"]::file-selector-button {
+    margin-right: 12px;
+    border: 0;
+    border-radius: 10px;
+    padding: 0 16px;
+    height: 36px;
+    background: linear-gradient(180deg, var(--accent), var(--accent-600));
+    color: #fff;
+    font-weight: 600;
+    cursor: pointer;
+    transition: filter .15s ease, transform .04s ease, box-shadow .2s ease;
+    box-shadow: 0 6px 12px rgba(37, 99, 235, 0.25);
+}
+
+/* Hover and active states like your other buttons */
+input[type="file"]::file-selector-button:hover {
+    filter: brightness(1.05);
+}
+
+input[type="file"]::file-selector-button:active {
+    transform: translateY(1px);
+}
+
+/* Focus ring */
+input[type="file"]::file-selector-button:focus-visible {
+    outline: none;
     box-shadow: 0 0 0 4px var(--ring);
 }
 
