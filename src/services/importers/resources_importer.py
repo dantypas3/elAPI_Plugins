@@ -1,101 +1,111 @@
-import json
-import math
-import warnings
+"""
+Resource importer implementation leveraging :class:`BaseImporter`.
+
+This module defines :class:`ResourcesImporter`, a concrete subclass of
+:class:`base_importer.BaseImporter`. It reads resources from a CSV file into
+a :class:`pandas.DataFrame`, constructs robust lookup dictionaries for
+column resolution and handles creation of resources via the ElabFTW API. All
+columns except ``title``, ``tags``, ``category``, ``template`` and ``body``
+are interpreted as extra fields and their values are patched into the
+resource's metadata if matching extra field definitions exist.
+
+In addition, the importer supports attaching files from a directory specified
+in a ``files_path`` column (or aliases), with support for a base directory
+to resolve relative paths.
+"""
 
 from __future__ import annotations
-from datetime import datetime
-from pathlib import Path
-from typing import Dict, Mapping, Optional, Union
 
-from elapi.api import FixedEndpoint
-
-from src.utils.content_extraction import canonicalize
-
+import json
 import logging
+import mimetypes
+import os
+from pathlib import Path
+from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple, Union
 
-import numpy as np
-import pandas as pd
+import pandas as pd  # type: ignore
 
-from utils.csv_tools import CsvTools
-from utils.endpoints import get_fixed
-from utils.validators import IDValidator
-from .base_importer import BaseImporter
+# Import the base importer from the current package or module
+try:
+    from base_importer import BaseImporter, canonicalize  # type: ignore
+except Exception:
+    # Fallback relative import if used as a package
+    from .base_importer import BaseImporter, canonicalize  # type: ignore
+
+try:
+    from src.utils.content_extraction import \
+        canonicalize as canonicalize_field  # type: ignore
+except Exception:
+    try:
+        from utils.content_extraction import \
+            canonicalize as canonicalize_field  # type: ignore
+    except Exception:
+        canonicalize_field = canonicalize  # type: ignore
 
 logger = logging.getLogger(__name__)
 
+# Late imports for third-party modules to avoid import cycles
+try:
+    from utils.csv_tools import CsvTools  # type: ignore
+    from utils.endpoints import get_fixed  # type: ignore
+except Exception:
+    CsvTools = None  # type: ignore
+    get_fixed = None  # type: ignore
+
 
 class ResourcesImporter(BaseImporter):
+    """Importer for the ElabFTW ``resources`` endpoint."""
 
-    def __init__ (self, csv_path: Union[Path, str]) -> None:
+    _KNOWN_POST_FIELDS: Iterable[str] = {"title", "tags", "category",
+                                         "template", "body"}
+
+    def __init__ (self, csv_path: Union[Path, str],
+                  files_base_dir: Optional[Union[str, Path]] = None) -> None:
+        if get_fixed is None or CsvTools is None:
+            raise RuntimeError(
+                "Required modules 'utils.endpoints' and 'utils.csv_tools' are not available")
         self._endpoint = get_fixed("resources")
         self._resources_df: pd.DataFrame = CsvTools.csv_to_df(csv_path)
-
-        self._cols_lower: Mapping[str, str]
-        self._cols_cannon: Mapping[str, str]
         self._cols_lower, self._cols_canon = self._build_column_indexes(
             self._resources_df.columns)
-
         self._category_col: Optional[str] = self._find_col_like("category_id")
+        self._files_base_dir: Optional[Path] = Path(
+            files_base_dir).expanduser() if files_base_dir else None
+        self._new_resources_counter: int = 0
+        self._patched_resources_counter: int = 0
 
-        self._new_resources_counter = 0
-        self._patched_resources_counter = 0
-
+    # ------------------- column helpers -------------------
     @classmethod
-    def _build_column_indexes (cls, columns: pd.Index) -> tuple[
+    def _build_column_indexes (cls, columns: pd.Index) -> Tuple[
         Dict[str, str], Dict[str, str]]:
-        """Return (lower_map, canon_map) with best-effort collision handling."""
         lower_map: Dict[str, str] = {}
         canon_map: Dict[str, str] = {}
-
         for original in columns:
+            if not isinstance(original, str):
+                continue
             lower_key = original.lower()
-            canon_key = canonicalize(original)
-
-            "title : tITle"
-            "title : TITLE"
-
+            canon_key = canonicalize_field(original)
             if lower_key not in lower_map:
                 lower_map[lower_key] = original
             elif lower_map[lower_key] != original:
                 logger.debug("Lowercase column collision: %r vs %r for key %r",
                              lower_map[lower_key], original, lower_key)
-
             if canon_key not in canon_map:
                 canon_map[canon_key] = original
             elif canon_map[canon_key] != original:
                 logger.warning(
                     "Canonical column collision: %r vs %r for key %r",
                     canon_map[canon_key], original, canon_key)
-
         return lower_map, canon_map
 
     def _find_col_like (self, target: str) -> Optional[str]:
-        """Return the original column whose canonical name contains the target."""
-        target = canonicalize(target)
+        key = canonicalize_field(target)
         for canon_key, original in self._cols_canon.items():
-            if target in canon_key:
+            if key in canon_key:
                 return original
         return None
 
-    # ---------- Public conveniences ----------------------------------------
-
-    def get_column (self, name: str) -> Optional[str]:
-        """Resolve a possibly-messy column name to the original column in the DataFrame.
-
-        Tries canonical match, then case-insensitive match. Returns None if not found.
-        """
-        canon = canonicalize(name)
-        if canon in self._cols_canon:
-            return self._cols_canon[canon]
-
-        lower = name.lower()
-        return self._cols_lower.get(lower)
-
-    @property
-    def category_col (self) -> Optional[str]:
-        """Original column name that represents the category id, if present."""
-        return self._category_col
-
+    # ------------------- base overrides -------------------
     @property
     def df (self) -> pd.DataFrame:
         return self._resources_df
@@ -105,56 +115,405 @@ class ResourcesImporter(BaseImporter):
         return self._cols_lower
 
     @property
-    def endpoint (self) -> FixedEndpoint:
+    def endpoint (self):
         return self._endpoint
 
-    def attach_files (self, id, file_path) -> None:
-        if not id.isdigit():
-            raise ValueError(f"Invalid experiment ID for upload: {id!r}")
+    @property
+    def category_col (self) -> Optional[str]:
+        return self._category_col
 
-        with file_path.open("rb") as file:
-            files = {
-                "file": (file_path.name, file)
-                }
+    # ------------------- files helpers -------------------
+    def _iter_files_in_dir (self, folder: Union[str, Path],
+            recursive: bool = True,
+            include_patterns: Optional[List[str]] = None,
+            exclude_hidden: bool = True, ) -> List[Path]:
+        p = Path(str(folder)).expanduser()
+        if not p.exists() or not p.is_dir():
+            logger.warning(
+                "Files folder does not exist or is not a directory: %s", p)
+            return []
 
-            attach_file = self.endpoint.post(endpoint_id=id,
-                                             sub_endpoint_name="uploads",
-                                             files=files)
+        def is_hidden (path: Path) -> bool:
+            if not exclude_hidden:
+                return False
+            return any(part.startswith(".") for part in path.parts)
+
+        files: List[Path] = []
+        it = p.rglob("*") if recursive else p.iterdir()
+        for f in it:
+            if f.is_file() and not is_hidden(f):
+                if include_patterns:
+                    if any(f.match(glob) for glob in include_patterns):
+                        files.append(f)
+                else:
+                    files.append(f)
+
+        try:
+            files.sort(key=lambda x: (str(x.parent), x.name))
+        except Exception:
+            files.sort()
+        if not files:
+            logger.warning("No files found in folder (recursive=%s): %s",
+                           recursive, p)
+        return files
+
+    def _find_path_col (self) -> Optional[str]:
+        aliases = {"files_path", "file_path", "attachments_path",
+            "attachments", "Folder with map and sequencing results",
+            # your CSV column name
+            "Folder with attachments",  # sometimes used in template
+            }
+        canon_aliases = {canonicalize_field(a) for a in aliases}
+        for col in self._resources_df.columns:
+            if isinstance(col, str) and canonicalize_field(
+                    col) in canon_aliases:
+                return col
+        return None
+
+    def _resolve_folder (self, value: Union[str, Path]) -> Optional[Path]:
+        if value is None or (isinstance(value, float) and pd.isna(value)):
+            return None
+        s = str(value).replace("\u00a0", " ").strip()
+        if not s:
+            return None
+        looks_like_path = any(
+            ch in s for ch in (os.sep, "/", "\\")) or os.path.isabs(
+            s) or "." in os.path.basename(
+            s) or self._files_base_dir is not None
+        if not looks_like_path:
+            logger.info(
+                "Skipping files upload: value does not look like a path: %r",
+                s)
+            return None
+        p = Path(s).expanduser()
+        if not p.is_absolute() and self._files_base_dir:
+            p = (self._files_base_dir / p).resolve()
+        return p
+
+    def attach_files (self, resource_id: Union[int, str],
+                      folder: Union[str, Path], recursive: bool = True,
+                      chunk_size: int = 10) -> None:
+        rid = str(resource_id)
+        if not rid.isdigit():
+            raise ValueError(
+                f"Invalid resource ID for upload: {resource_id!r}")
+
+        files = self._iter_files_in_dir(folder, recursive=recursive)
+        if not files:
+            logger.warning("No files to upload from: %s", folder)
             return
 
-    def create_new (self, row: pd.Series, template: str = "") -> str:
+        def _mime_or_default (p: Path) -> str:
+            return mimetypes.guess_type(p.name)[
+                0] or "application/octet-stream"
 
-        title_col = self._find_col_like("title")
-        if not title_col:
-            raise ValueError("No 'title' column found in the resources CSV.")
+        def _send_batch (batch: List[Path]) -> bool:
+            payload = []
+            handles = []
+            try:
+                for fp in batch:
+                    fh = fp.open("rb")
+                    handles.append(fh)
+                    payload.append(
+                        ("files[]", (fp.name, fh, _mime_or_default(fp))))
+                try:
+                    resp = self.endpoint.post(endpoint_id=rid,
+                                              sub_endpoint_name="uploads",
+                                              files=payload)
+                    resp.raise_for_status()
+                    return True
+                except Exception as exc:
+                    logger.info("Batched upload (%d files) failed: %s",
+                                len(batch), exc)
+                    return False
+            finally:
+                for h in handles:
+                    try:
+                        h.close()
+                    except Exception:
+                        pass
 
-        path_col = self._find_col_like("files_path")
-        if not path_col:
-            raise ValueError(
-                "No 'files_path' column found in the resources CSV.")
+        if chunk_size and chunk_size > 1:
+            i = 0
+            all_batches_ok = True
+            while i < len(files):
+                batch = files[i: i + chunk_size]
+                ok = _send_batch(batch)
+                if not ok:
+                    all_batches_ok = False
+                    break
+                i += chunk_size
+            if all_batches_ok:
+                logger.info("Uploaded %d files in %d batch(es).", len(files),
+                            (len(files) + chunk_size - 1) // chunk_size)
+                return
 
-        title_val = str(row[title_col]) if not pd.isna(row[title_col]) else ""
-        files_dir = row[path_col] if path_col in row else ""
-        tags_val = self._get_tags(row)
+        errors: List[str] = []
+        for fp in files:
+            try:
+                with fp.open("rb") as fh:
+                    resp = self.endpoint.post(endpoint_id=rid,
+                                              sub_endpoint_name="uploads",
+                                              files=[("files[]", (fp.name, fh,
+                                                                  _mime_or_default(
+                                                                      fp)))])
+                try:
+                    resp.raise_for_status()
+                    continue
+                except Exception:
+                    with fp.open("rb") as fh2:
+                        resp2 = self.endpoint.post(endpoint_id=rid,
+                                                   sub_endpoint_name="uploads",
+                                                   files={
+                                                       "file": (fp.name, fh2,
+                                                                _mime_or_default(
+                                                                    fp))
+                                                       })
+                    resp2.raise_for_status()
+            except Exception as exc:
+                logger.error("Failed to upload file %s to resource %s: %s", fp,
+                             rid, exc)
+                errors.append(f"{fp}: {exc}")
 
+        if errors:
+            raise RuntimeError(
+                "One or more uploads failed:\n- " + "\n- ".join(errors))
+
+    # ------------------- extra fields -------------------
+    def _collect_csv_extra_fields (self, row: pd.Series,
+                                   known_columns: Optional[
+                                       Iterable[str]] = None) -> Dict[
+        str, Any]:
+        known_canon = {canonicalize_field(x) for x in self._KNOWN_POST_FIELDS}
+        if known_columns:
+            known_canon |= {canonicalize_field(x) for x in known_columns}
+        extras: Dict[str, Any] = {}
+        for col, val in row.items():
+            if not isinstance(col, str):
+                continue
+            ckey = canonicalize_field(col)
+            if ckey in known_canon:
+                continue
+            if val is None or (isinstance(val, float) and pd.isna(val)):
+                continue
+            sval = str(val).replace("\u00a0", " ").strip()
+            if not sval:
+                continue
+            extras[ckey] = sval
+        return extras
+
+    @staticmethod
+    def _split_multi (raw: str) -> List[str]:
+        raw = raw.replace("\u00a0", " ")
+        parts: List[str] = []
+        for chunk in raw.replace(";", ",").split(","):
+            s = chunk.strip()
+            if s:
+                parts.append(s)
+        return parts
+
+    @staticmethod
+    def _coerce_for_field (defn: dict, raw: str) -> Optional[Any]:
+        ftype = (defn or {}).get("type")
+        allow_multi = bool((defn or {}).get("allow_multi_values"))
+        options = (defn or {}).get("options") or []
+        options_set = {str(o).strip() for o in options}
+
+        if ftype == "select":
+            vals = ResourcesImporter._split_multi(raw)
+            if allow_multi:
+                picked = [v for v in vals if v in options_set]
+                if not picked and vals:
+                    lower_map = {o.lower(): o for o in options_set}
+                    for v in vals:
+                        m = lower_map.get(v.lower())
+                        if m and m not in picked:
+                            picked.append(m)
+                return picked
+            else:
+                for v in vals:
+                    if v in options_set:
+                        return v
+                lower_map = {o.lower(): o for o in options_set}
+                for v in vals:
+                    m = lower_map.get(v.lower())
+                    if m:
+                        return m
+                return None
+        else:
+            return raw
+
+    def post_extra_fields_from_row (self, resource_id: Union[int, str],
+                                    row: pd.Series, known_columns: Optional[
+                Iterable[str]] = None) -> None:
+        """Intersect CSV extras with template fields, coerce types, and PATCH metadata (as JSON string)."""
+        rid = str(resource_id)
+        existing_json = self.get_existing_json(rid)
+
+        raw_metadata = existing_json.get("metadata") or {}
+        if isinstance(raw_metadata, str):
+            try:
+                metadata = json.loads(raw_metadata)
+            except Exception:
+                metadata = {}
+        else:
+            metadata = raw_metadata
+
+        elab_extra_fields: Dict[str, dict] = metadata.setdefault(
+            "extra_fields", {})
+
+        defs_by_canon: Dict[str, str] = {}
+        for orig_key in list(elab_extra_fields.keys()):
+            c = canonicalize_field(orig_key)
+            if c not in defs_by_canon:
+                defs_by_canon[c] = orig_key
+
+        csv_extras = self._collect_csv_extra_fields(row,
+                                                    known_columns=known_columns)
+
+        changed: Dict[str, Any] = {}
+        for ckey, raw_val in csv_extras.items():
+            if ckey not in defs_by_canon:
+                continue
+            real_key = defs_by_canon[ckey]
+            defn = elab_extra_fields.get(real_key) or {}
+            coerced = self._coerce_for_field(defn, raw_val)
+            if coerced is None:
+                logger.info(
+                    "Skipping field %r: value %r not valid for options.",
+                    real_key, raw_val)
+                continue
+            slot = elab_extra_fields.get(real_key)
+            if not isinstance(slot, dict):
+                elab_extra_fields[real_key] = {
+                    "value": coerced
+                    }
+            else:
+                slot["value"] = coerced
+            changed[real_key] = coerced
+
+        if not changed:
+            logger.info("No matching extra fields to upload for resource %s.",
+                        rid)
+            return
+
+        # IMPORTANT: send metadata as a JSON STRING (not an object)
+        metadata_str = json.dumps(metadata, ensure_ascii=False,
+                                  separators=(",", ":"))
         payload = {
-            "title"   : title_val,
-            "tags"    : tags_val,
-            "template": template,
+            "metadata": metadata_str
             }
-
-        resp = self.endpoint.post(data=payload)
+        resp = self.endpoint.patch(endpoint_id=rid, data=payload)
         try:
             resp.raise_for_status()
-        except Exception:
-            raise RuntimeError(f"Creation of {title_val!r} failed with status "
-                               f"{resp.status_code}: {resp.text}")
+        except Exception as exc:
+            raise RuntimeError(
+                f"Failed to patch extra fields for resource {rid}: "
+                f"{getattr(resp, 'status_code', '?')} {getattr(resp, 'text', '')}") from exc
 
-        resource_id = str(self.get_elab_id(resp))
-        if files_dir:
-            self.attach_files(resource_id, files_dir)
+    # ------------------- payload construction -------------------
+    def _extract_known_post_fields (self, row: pd.Series, template: str) -> \
+    Dict[str, Any]:
+        data: Dict[str, Any] = {}
+        title = self.get_title(row)
+        if title:
+            data["title"] = title
+        tags = self.get_tags(row)
+        if tags:
+            data["tags"] = tags
+        category_val: Optional[str] = None
+        cat_col = self._find_col_like("category")
+        if cat_col and cat_col in row:
+            category_val = self.normalize_id(row[cat_col])
+        if not category_val:
+            category_val = self.get_category_id(row)
+        if category_val:
+            data["category"] = category_val
+        tmpl_col = self._find_col_like("template")
+        tmpl_val: Optional[str] = None
+        if tmpl_col and tmpl_col in row:
+            tmpl_val = self.normalize_id(row[tmpl_col])
+        data["template"] = template or tmpl_val or ""
+        body_col = self._find_col_like("body")
+        if body_col and body_col in row:
+            body_val = row[body_col]
+            if not pd.isna(body_val) and str(body_val).strip():
+                data["body"] = str(body_val)
+        return data
+
+    # ------------------- creation -------------------
+    def create_new (self, row: pd.Series, template: str = "") -> str:
+        payload = self._extract_known_post_fields(row, template)
+        response = self.endpoint.post(data=payload)
+        try:
+            response.raise_for_status()
+        except Exception as exc:
+            title = payload.get("title", "<unknown title>")
+            raise RuntimeError(
+                f"Creation of {title!r} failed with status {response.status_code}: {response.text}") from exc
+
+        resource_id = str(self.get_elab_id(response))
+
+        path_col = self._find_path_col()
+        if path_col and path_col in row:
+            folder_path = self._resolve_folder(row[path_col])
+            if folder_path and folder_path.exists() and folder_path.is_dir():
+                self.attach_files(resource_id, folder_path, recursive=True,
+                                  chunk_size=10)
+            elif folder_path:
+                logger.warning(
+                    "Files folder does not exist or is not a directory: %s",
+                    folder_path)
+
+        known = {canonicalize_field(name) for name in self._KNOWN_POST_FIELDS}
+        if path_col:
+            known.add(canonicalize_field(path_col))
+        self.post_extra_fields_from_row(resource_id, row, known_columns=known)
 
         self._new_resources_counter += 1
         return resource_id
 
-    # def import_resources (self, csv_path: Union[Path, str],  #                       category_id: int = None, is_new: bool = True) -> int:  #  #     new_resources = 0  #  #     IDValidator("categories", category_id).validate()  #  #     resources_df = CsvTools.csv_to_df(csv_path)  #  #     for _, row in resources_df.iterrows():  #         new_resource = self._endpoint  #  #         resource: Dict[str, Any] = {}  #         resource_id: int  #         tags: List[str] = []  #  #         if is_new:  #  #             if "title" in resources_df.columns:  #                 title = resources_df["title"]  #  #             if "tags" in resources_df.columns:  #                 tag_list = resources_df["tags"]  #                 if isinstance(tag_list, np.ndarray):  #                     tags.extend(tag_list.tolist())  #                 elif isinstance(tag_list, list):  #                     tags.extend(tag_list)  #  #             data = {  #                 "title"   : row["title"],  #                 "template": category_id,  #                 "tags"    : tags  #                 }  #  #             resp = new_resource.post(data=data)  #  #             location = (resp.headers.get("Location",  #                                          "") or resp.headers.get(  #                 "location", ""))  #  #             new_resource_id = location.rstrip("/").split("/")[-1]  #  #         else:  #             resource_id = row["resource_id"]  #  #             if "title" in resources_df.columns:  #                 resource["title"] = row["title"]  #  #         if "date" in resources_df.columns:  #             date = row["date"]  #             dt = datetime.strptime(date, "%d.%m.%Y")  #             date = dt.date().isoformat()  #             resource["date"] = date  #         if "rating" in resources_df.columns:  #             resource["rating"] = row["rating"]  #         if "category" in resources_df.columns:  #             resource["category"] = row["category"]  #         if "locked" in resources_df.columns:  #             if resources_df["locked"] == 0:  #                 resource["locked"] = 0  #             else:  #                 resource["locked"] = 1  #         if "userid" in resources_df.columns:  #             resource["userid"] = row["userid"]  #         if "is_bookable" in resources_df.columns:  #             resource["is_bookable"] = row["is_bookable"]  #         if "status" in resources_df.columns:  #             resource["status"] = str(row["status"])  #         if "body" in resources_df.columns:  #             resource["body"] = row["body"]  #  #         raw_metadata = resource.get("metadata")  #         metadata = json.loads(raw_metadata) if isinstance(raw_metadata,  #                                                           str) else (  #             raw_metadata)  #  #         if isinstance(metadata.get("extra_fields"), str):  #             metadata["extra_fields"] = json.loads(metadata["extra_fields"])  #  #         extra_fields = metadata.get("extra_fields", {})  #         known_fields = {"resource_id", "title", "body"}  #         unexpected_columns = [col for col in resources_df.columns if  #                               col not in extra_fields and col not in known_fields]  #  #         if unexpected_columns:  #             warnings.warn(  #                 f"Unexpected columns in CSV not found in metadata["  #                 f"'extra_fields']: {unexpected_columns}")  #  #         for field in extra_fields:  #             if field in df.columns:  #                 value = row[field]  #                 if hasattr(value, 'item'):  #                     value = value.item()  #                 if value is None or (  #                         isinstance(value, float) and math.isnan(value)):  #                     value = ""  #                 metadata["extra_fields"][field]["value"] = str(value)  #                 print(f"Field '{field}' updated to: "  #                       f"{metadata['extra_fields'][field]['value']}")  #             else:  #                 print(f"Field '{field}' not found in CSV. Skipping.")  #  #         patch_response = new_resource.patch(endpoint_id=row['id'],  #                                             data=resource)  #  #         if patch_response.status_code == 200:  #             print(f"Patch of resource {row['id']} complete")  #         else:  #             print(f"Failed to patch resource {row['id']}.\n"  #                   f"Status code: {patch_response.status_code}\n",  #                   f"Response: {patch_response.text}")  #  #     return new_resources
+    # ------------------- patch existing -------------------
+    def patch_existing (self, experiment_id: Union[int, str], title: str,
+                        category: str, body: str,
+                        tags: Optional[List[str]] = None) -> int:
+        if tags is None:
+            tags = []
+
+        rid = str(experiment_id)
+        existing_json = self.get_existing_json(rid)
+        raw_metadata = existing_json.get("metadata") or {}
+        if isinstance(raw_metadata, str):
+            try:
+                metadata = json.loads(raw_metadata)
+            except Exception:
+                metadata = {}
+        else:
+            metadata = raw_metadata
+
+        elab_extra_fields = metadata.setdefault("extra_fields", {})
+        for k in list(elab_extra_fields.keys()):
+            lk = k.lower()
+            if lk != k:
+                elab_extra_fields[lk] = elab_extra_fields.pop(k)
+
+        # IMPORTANT: send metadata as JSON STRING
+        metadata_str = json.dumps(metadata, ensure_ascii=False,
+                                  separators=(",", ":"))
+        payload = {
+            "title": title,
+            "tags": tags,
+            "category": category,
+            "body": body,
+            "metadata": metadata_str
+            }
+        patch = self.endpoint.patch(endpoint_id=rid, data=payload)
+        patch.raise_for_status()
+        return patch.status_code
+
+    # ------------------- bulk -------------------
+    def create_all_from_csv (self, template: str = "") -> List[str]:
+        ids: List[str] = []
+        for _, row in self.df.iterrows():
+            ids.append(self.create_new(row=row, template=template))
+        return ids
