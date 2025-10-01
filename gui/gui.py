@@ -47,10 +47,11 @@ def index () -> Union[str, WerkzeugResponse]:
             exporter = ExporterFactory.get_exporter("experiments")
             path = exporter.xlsx_export(fname)
             return send_file(path, as_attachment=True)
-
         elif action == "imports":
             cid = int(request.form["category"])
             import_path = request.form.get("import_path", "").strip()
+            import_target = (request.form.get(
+                "import_target") or "resources").strip().lower()
 
             if import_path:
                 full_path = os.path.abspath(import_path)
@@ -69,17 +70,32 @@ def index () -> Union[str, WerkzeugResponse]:
                 source = full_path
 
             try:
-                importer = ImporterFactory.get_importer("resources")
-                count = importer.create_new(csv_path=full_path,
-                                            category_id=cid)
-                flash(f"Imported {count} resources from {source}", "success")
+                if import_target == "resources":
+
+                    importer = ImporterFactory.get_importer("resources",
+                                                            csv_path=full_path,
+                                                            template=cid)
+
+                    ids = importer.create_all_from_csv()
+                    count = len(ids)
+                    flash(f"Imported {count} resources from {source}",
+                          "success")
+
+                # elif import_target == "experiments":
+                #     ExperimentsCls = ImporterFactory.get_importer("experiments")
+                #     importer = ExperimentsCls(csv_path=full_path)
+                #     ids = importer.create_all_from_csv()
+                #     count = len(ids)
+
+                else:
+                    flash(f"Unknown import target: {import_target}", "error")
+                    return redirect(url_for("index"))
+
+                flash(f"Imported {count} {import_target} from {source}",
+                      "success")
             except Exception as e:
                 flash(f"Import failed: {e}", "error")
 
-            return redirect(url_for("index"))
-
-        else:
-            flash("Unknown action", "error")
             return redirect(url_for("index"))
 
     return render_template("index.html", categories=categories)

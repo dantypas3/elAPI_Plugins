@@ -60,7 +60,8 @@ class ResourcesImporter(BaseImporter):
                                          "template", "body"}
 
     def __init__ (self, csv_path: Union[Path, str],
-                  files_base_dir: Optional[Union[str, Path]] = None) -> None:
+                  files_base_dir: Optional[Union[str, Path]] = None,
+                  template: Union[int, str] = None) -> None:
         if get_fixed is None or CsvTools is None:
             raise RuntimeError(
                 "Required modules 'utils.endpoints' and 'utils.csv_tools' are not available")
@@ -68,6 +69,9 @@ class ResourcesImporter(BaseImporter):
         self._resources_df: pd.DataFrame = CsvTools.csv_to_df(csv_path)
         self._cols_lower, self._cols_canon = self._build_column_indexes(
             self._resources_df.columns)
+
+        self._template = template
+
         self._category_col: Optional[str] = self._find_col_like("category_id")
         self._files_base_dir: Optional[Path] = Path(
             files_base_dir).expanduser() if files_base_dir else None
@@ -124,9 +128,9 @@ class ResourcesImporter(BaseImporter):
 
     # ------------------- files helpers -------------------
     def _iter_files_in_dir (self, folder: Union[str, Path],
-            recursive: bool = True,
-            include_patterns: Optional[List[str]] = None,
-            exclude_hidden: bool = True, ) -> List[Path]:
+                            recursive: bool = True,
+                            include_patterns: Optional[List[str]] = None,
+                            exclude_hidden: bool = True, ) -> List[Path]:
         p = Path(str(folder)).expanduser()
         if not p.exists() or not p.is_dir():
             logger.warning(
@@ -159,10 +163,8 @@ class ResourcesImporter(BaseImporter):
 
     def _find_path_col (self) -> Optional[str]:
         aliases = {"files_path", "file_path", "attachments_path",
-            "attachments", "Folder with map and sequencing results",
-            # your CSV column name
-            "Folder with attachments",  # sometimes used in template
-            }
+                   "attachments", "Folder with map and sequencing results",
+                   "Folder with attachments", }
         canon_aliases = {canonicalize_field(a) for a in aliases}
         for col in self._resources_df.columns:
             if isinstance(col, str) and canonicalize_field(
@@ -413,7 +415,7 @@ class ResourcesImporter(BaseImporter):
 
     # ------------------- payload construction -------------------
     def _extract_known_post_fields (self, row: pd.Series, template: str) -> \
-    Dict[str, Any]:
+            Dict[str, Any]:
         data: Dict[str, Any] = {}
         title = self.get_title(row)
         if title:
@@ -421,19 +423,9 @@ class ResourcesImporter(BaseImporter):
         tags = self.get_tags(row)
         if tags:
             data["tags"] = tags
-        category_val: Optional[str] = None
-        cat_col = self._find_col_like("category")
-        if cat_col and cat_col in row:
-            category_val = self.normalize_id(row[cat_col])
-        if not category_val:
-            category_val = self.get_category_id(row)
-        if category_val:
-            data["category"] = category_val
-        tmpl_col = self._find_col_like("template")
-        tmpl_val: Optional[str] = None
-        if tmpl_col and tmpl_col in row:
-            tmpl_val = self.normalize_id(row[tmpl_col])
-        data["template"] = template or tmpl_val or ""
+
+        data["template"] = self._template
+
         body_col = self._find_col_like("body")
         if body_col and body_col in row:
             body_val = row[body_col]
@@ -501,10 +493,10 @@ class ResourcesImporter(BaseImporter):
         metadata_str = json.dumps(metadata, ensure_ascii=False,
                                   separators=(",", ":"))
         payload = {
-            "title": title,
-            "tags": tags,
+            "title"   : title,
+            "tags"    : tags,
             "category": category,
-            "body": body,
+            "body"    : body,
             "metadata": metadata_str
             }
         patch = self.endpoint.patch(endpoint_id=rid, data=payload)
