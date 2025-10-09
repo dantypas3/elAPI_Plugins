@@ -10,8 +10,8 @@ from httpx import ReadTimeout, ConnectTimeout
 from requests import ReadTimeout, ConnectTimeout
 from werkzeug.utils import secure_filename
 
-from utils.content_extraction import strip_html
-from utils.endpoints import get_fixed
+from src.utils.content_extraction import strip_html
+from src.utils.endpoints import get_fixed
 from .base_exporter import BaseExporter
 
 

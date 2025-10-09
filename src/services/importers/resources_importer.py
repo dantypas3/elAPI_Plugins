@@ -127,38 +127,21 @@ class ResourcesImporter(BaseImporter):
         return self._category_col
 
     # ------------------- files helpers -------------------
-    def _iter_files_in_dir (self, folder: Union[str, Path],
-                            recursive: bool = True,
-                            include_patterns: Optional[List[str]] = None,
-                            exclude_hidden: bool = True, ) -> List[Path]:
-        p = Path(str(folder)).expanduser()
-        if not p.exists() or not p.is_dir():
+    def _iter_files_in_dir (self, folder: Union[str, Path]) -> List[Path]:
+        path = Path(str(folder)).expanduser()
+
+        if not path.exists() or not path.is_dir():
             logger.warning(
-                "Files folder does not exist or is not a directory: %s", p)
+                "Files folder does not exist or is not a directory: %s", path)
             return []
 
-        def is_hidden (path: Path) -> bool:
-            if not exclude_hidden:
-                return False
-            return any(part.startswith(".") for part in path.parts)
+        files = list(path.rglob("*"))
+        files = [f for f in files if f.is_file()]
 
-        files: List[Path] = []
-        it = p.rglob("*") if recursive else p.iterdir()
-        for f in it:
-            if f.is_file() and not is_hidden(f):
-                if include_patterns:
-                    if any(f.match(glob) for glob in include_patterns):
-                        files.append(f)
-                else:
-                    files.append(f)
-
-        try:
-            files.sort(key=lambda x: (str(x.parent), x.name))
-        except Exception:
-            files.sort()
         if not files:
-            logger.warning("No files found in folder (recursive=%s): %s",
-                           recursive, p)
+            logger.warning("No files found in folder: %s",
+                           path)
+
         return files
 
     def _find_path_col (self) -> Optional[str]:
@@ -193,14 +176,14 @@ class ResourcesImporter(BaseImporter):
         return p
 
     def attach_files (self, resource_id: Union[int, str],
-                      folder: Union[str, Path], recursive: bool = True,
+                      folder: Union[str, Path],
                       chunk_size: int = 10) -> None:
         rid = str(resource_id)
         if not rid.isdigit():
             raise ValueError(
                 f"Invalid resource ID for upload: {resource_id!r}")
 
-        files = self._iter_files_in_dir(folder, recursive=recursive)
+        files = self._iter_files_in_dir(folder)
         if not files:
             logger.warning("No files to upload from: %s", folder)
             return
@@ -450,7 +433,7 @@ class ResourcesImporter(BaseImporter):
         if path_col and path_col in row:
             folder_path = self._resolve_folder(row[path_col])
             if folder_path and folder_path.exists() and folder_path.is_dir():
-                self.attach_files(resource_id, folder_path, recursive=True,
+                self.attach_files(resource_id, folder_path,
                                   chunk_size=10)
             elif folder_path:
                 logger.warning(

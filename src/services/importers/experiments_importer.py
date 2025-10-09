@@ -6,9 +6,9 @@ import json
 
 from elapi.api import FixedEndpoint
 
-from utils.content_extraction import canonicalize
-from utils.csv_tools import CsvTools
-from utils.endpoints import get_fixed
+from src.utils.content_extraction import canonicalize
+from src.utils.csv_tools import CsvTools
+from src.utils.endpoints import get_fixed
 from .base_importer import BaseImporter
 
 

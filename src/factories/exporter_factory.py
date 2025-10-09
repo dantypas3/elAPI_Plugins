@@ -1,7 +1,7 @@
 from typing import Callable, Dict, Optional
 
-from services.exporters import ExperimentsExporter, ResourceExporter
-from services.exporters.base_exporter import BaseExporter
+from ..services.exporters import ExperimentsExporter, ResourceExporter
+from ..services.exporters.base_exporter import BaseExporter
 
 
 class ExporterFactory:

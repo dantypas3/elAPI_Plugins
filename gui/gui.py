@@ -12,7 +12,7 @@ from werkzeug.utils import secure_filename
 from werkzeug.wrappers.response import Response as WerkzeugResponse
 
 from src.factories import ExporterFactory, ImporterFactory
-from utils import endpoints
+from src.utils import endpoints
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 TEMPLATE_DIR = os.path.join(SCRIPT_DIR, "templates")

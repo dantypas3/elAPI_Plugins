@@ -3,7 +3,7 @@ from typing import Union
 
 from elapi.validators import ValidationError, Validator
 
-from utils.endpoints import get_fixed
+from src.utils.endpoints import get_fixed
 
 _ID_PATTERN = re.compile(r"^\d+$|^me$", re.IGNORECASE)
 
