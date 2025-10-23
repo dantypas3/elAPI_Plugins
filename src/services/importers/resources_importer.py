@@ -1,19 +1,3 @@
-"""
-Resource importer implementation leveraging :class:`BaseImporter`.
-
-This module defines :class:`ResourcesImporter`, a concrete subclass of
-:class:`base_importer.BaseImporter`. It reads resources from a CSV file into
-a :class:`pandas.DataFrame`, constructs robust lookup dictionaries for
-column resolution and handles creation of resources via the ElabFTW API. All
-columns except ``title``, ``tags``, ``category``, ``template`` and ``body``
-are interpreted as extra fields and their values are patched into the
-resource's metadata if matching extra field definitions exist.
-
-In addition, the importer supports attaching files from a directory specified
-in a ``files_path`` column (or aliases), with support for a base directory
-to resolve relative paths.
-"""
-
 from __future__ import annotations
 
 import json
@@ -22,36 +6,16 @@ import mimetypes
 import os
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple, Union
+from base_importer import BaseImporter, canonicalize
+from src.utils.content_extraction import canonicalize as canonicalize_field
+from src.utils.csv_tools import CsvTools
+from src.utils.endpoints import get_fixed
+
+from src.utils.paths import CONFIG_DIR
+
 
 import pandas as pd  # type: ignore
-
-# Import the base importer from the current package or module
-try:
-    from base_importer import BaseImporter, canonicalize  # type: ignore
-except Exception:
-    # Fallback relative import if used as a package
-    from .base_importer import BaseImporter, canonicalize  # type: ignore
-
-try:
-    from src.utils.content_extraction import \
-        canonicalize as canonicalize_field  # type: ignore
-except Exception:
-    try:
-        from utils.content_extraction import \
-            canonicalize as canonicalize_field  # type: ignore
-    except Exception:
-        canonicalize_field = canonicalize  # type: ignore
-
 logger = logging.getLogger(__name__)
-
-# Late imports for third-party modules to avoid import cycles
-try:
-    from utils.csv_tools import CsvTools  # type: ignore
-    from utils.endpoints import get_fixed  # type: ignore
-except Exception:
-    CsvTools = None  # type: ignore
-    get_fixed = None  # type: ignore
-
 
 class ResourcesImporter(BaseImporter):
     """Importer for the ElabFTW ``resources`` endpoint."""
@@ -147,7 +111,7 @@ class ResourcesImporter(BaseImporter):
     def _find_path_col (self) -> Optional[str]:
         aliases = {"files_path", "file_path", "attachments_path",
                    "attachments", "Folder with map and sequencing results",
-                   "Folder with attachments", }
+                   "Folder with attachments"}
         canon_aliases = {canonicalize_field(a) for a in aliases}
         for col in self._resources_df.columns:
             if isinstance(col, str) and canonicalize_field(
