@@ -1,11 +1,11 @@
 """
-This module defines :class:`BaseImporter`, an abstract base class for
+This module defines: class:`BaseImporter`, an abstract base class for
 importing data into ElabFTW endpoints.  It provides shared helpers for
-normalising identifiers, resolving category columns, extracting titles,
-parsing tag lists and updating ``metadata.extra_fields`` on existing
+normalizing identifiers, resolving category columns, extracting titles,
+parsing tag lists, and updating ``metadata.extra_fields`` on existing
 resources or experiments.
 
-Concrete importers should subclass :class:`BaseImporter` and implement
+Concrete importers should subclass: class:`BaseImporter` and implement
 the :attr:`df`, :attr:`cols_lower` and :attr:`endpoint` properties.
 """
 
@@ -119,16 +119,7 @@ class BaseImporter(ABC):
         raise NotImplementedError
 
     # ----
-
-    def _is_hidden (self, path: Path, exclude_hidden: bool = False) -> bool:
-        if not exclude_hidden:
-            return False
-        return any(part.startswith(".") for part in path.parts)
-
-    def _iter_files_in_dir (self, folder: Union[str, Path],
-                            recursive: bool = True,
-                            include_patterns: Optional[List[str]] = None,
-                            exclude_hidden: bool = True, ) -> List[Path]:
+    def _iter_files_in_dir (self, folder: Union[str, Path]) -> List[Path]:
 
         path = Path(str(folder)).expanduser()
 
@@ -137,23 +128,11 @@ class BaseImporter(ABC):
                 "Files folder does not exist or is not a directory: %s", path)
             return []
 
-        files: List[Path] = []
-        it = path.rglob("*") if recursive else path.iterdir()
-        for file in it:
-            if file.is_file() and not self._is_hidden(file, exclude_hidden):
-                if include_patterns:
-                    if any(file.match(glob) for glob in include_patterns):
-                        files.append(file)
-                else:
-                    files.append(file)
+        files = [f for f in path.rglob("*") if f.is_file()]
 
-        try:
-            files.sort(key=lambda x: (str(x.parent), x.name))
-        except Exception:
-            files.sort()
         if not files:
-            logger.warning("No files found in folder (recursive=%s): %s",
-                           recursive, path)
+            logger.warning("No files found in folder: %s", path)
+
         return files
 
     def _resolve_folder (self, raw_value: Union[str, Path]) -> Optional[Path]:
@@ -405,7 +384,7 @@ class BaseImporter(ABC):
         if isinstance(val, (list, tuple, set)):
             return [str(x).strip() for x in val if str(x).strip()]
         if isinstance(val, str):
-            # Split on common delimiters
+
             for delim in [";", ",", "|"]:
                 if delim in val:
                     parts = val.split(delim)
