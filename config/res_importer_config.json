@@ -1,0 +1,18 @@
+{
+  "known_post_fields": [
+    "title",
+    "tags",
+    "category",
+    "template",
+    "body"
+  ],
+  "path_col": [
+    "files_path",
+    "file_path",
+    "attachments_path",
+    "attachments",
+    "folder with map and sequencing results",
+    "folder with attachments"
+  ],
+  "upload_chunk_size": 10
+}
