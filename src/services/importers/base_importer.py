@@ -13,22 +13,26 @@ from __future__ import annotations
 
 import logging
 import math
-from abc import ABC, abstractmethod
-from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple
+import os
+import mimetypes
 
-import pandas as pd  # type: ignore
-from elapi.api import FixedEndpoint  # type: ignore
-from responses import Response  # type: ignore
+from abc import ABC, abstractmethod
+from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple, Union
+
+import pandas as pd
+from elapi.api import FixedEndpoint
+from responses import Response
+from pathlib import Path
 
 try:
-    # Prefer the canonicalise function from our project if available
-    from src.utils.content_extraction import canonicalize  # type: ignore
-except Exception:  # pragma: no cover
+    from src.utils.content_extraction import canonicalize as canonicalize_field
+except ImportError:
     try:
-        from utils.content_extraction import canonicalize  # type: ignore
-    except Exception:
-        def canonicalize (s: str) -> str:  # type: ignore
-            """Fallback canonicalise implementation: lower‑case and strip non‑alphanumerics."""
+        from utils.content_extraction import \
+            canonicalize as canonicalize_field  # type: ignore
+    except ImportError:
+        def canonicalize_field (s: str) -> str:  # type: ignore
+            """Fallback canonicalize: lower-case and strip non-alphanumerics."""
             return "".join(c for c in str(s).lower() if c.isalnum())
 
 logger = logging.getLogger(__name__)
@@ -46,15 +50,59 @@ class BaseImporter(ABC):
       ``get``, ``post`` and ``patch`` methods.
 
     This base class implements generic helpers such as normalising ids,
-    extracting category ids, titles and tags, and updating extra fields in
+    extracting category ids, titles, and tags, and updating extra fields in
     metadata.  Concrete importers can build upon these to provide more
     specialised behaviour.
     """
 
+    @staticmethod
+    def _build_column_indexes (columns: pd.Index) -> Tuple[
+        Dict[str, str], Dict[str, str]]:
+        lower_map: Dict[str, str] = {}
+        canon_map: Dict[str, str] = {}
+
+        for original in columns:
+            if not isinstance(original, str):
+                continue
+            lower_key = original.lower()
+            canon_key = canonicalize_field(original)
+
+            if lower_key not in lower_map:
+                lower_map[lower_key] = original
+            elif lower_map[lower_key] != original:
+                logger.debug("Lowercase column collision: %r vs %r for key %r",
+                             lower_map[lower_key], original, lower_key)
+
+            if canon_key not in canon_map:
+                canon_map[canon_key] = original
+            elif canon_map[canon_key] != original:
+                logger.warning(
+                    "Canonical column collision: %r vs %r for key %r",
+                    canon_map[canon_key], original, canon_key)
+
+        return lower_map, canon_map
+
+    def _find_col_like (self, target: str) -> Optional[str]:
+        key = canonicalize_field(target)
+        for canon_key, original in self.cols_canon.items():
+            if key in canon_key:
+                return original
+        return None
+
+    def _find_path_col (self) -> Optional[str]:
+        aliases = {"files_path", "file_path", "attachments_path",
+                   "attachments"}
+        canon_aliases = {canonicalize_field(a) for a in aliases}
+        for col in self.basic_df.columns:
+            if isinstance(col, str) and canonicalize_field(
+                    col) in canon_aliases:
+                return col
+        return None
+
     # --- Required API ---
     @property
     @abstractmethod
-    def df (self) -> pd.DataFrame:
+    def basic_df (self) -> pd.DataFrame:
         """Return the DataFrame backing the importer."""
         raise NotImplementedError
 
@@ -69,6 +117,166 @@ class BaseImporter(ABC):
     def endpoint (self) -> FixedEndpoint:
         """Return the endpoint used to interact with ElabFTW."""
         raise NotImplementedError
+
+    # ----
+
+    def _is_hidden (self, path: Path, exclude_hidden: bool = False) -> bool:
+        if not exclude_hidden:
+            return False
+        return any(part.startswith(".") for part in path.parts)
+
+    def _iter_files_in_dir (self, folder: Union[str, Path],
+                            recursive: bool = True,
+                            include_patterns: Optional[List[str]] = None,
+                            exclude_hidden: bool = True, ) -> List[Path]:
+
+        path = Path(str(folder)).expanduser()
+
+        if not path.exists() or not path.is_dir():
+            logger.warning(
+                "Files folder does not exist or is not a directory: %s", path)
+            return []
+
+        files: List[Path] = []
+        it = path.rglob("*") if recursive else path.iterdir()
+        for file in it:
+            if file.is_file() and not self._is_hidden(file, exclude_hidden):
+                if include_patterns:
+                    if any(file.match(glob) for glob in include_patterns):
+                        files.append(file)
+                else:
+                    files.append(file)
+
+        try:
+            files.sort(key=lambda x: (str(x.parent), x.name))
+        except Exception:
+            files.sort()
+        if not files:
+            logger.warning("No files found in folder (recursive=%s): %s",
+                           recursive, path)
+        return files
+
+    def _resolve_folder (self, raw_value: Union[str, Path]) -> Optional[Path]:
+        """
+        Convert a CSV cell into a Path if it looks like a valid file/folder path.
+        Returns None if the value is empty, invalid, or clearly not a path.
+        """
+        if raw_value is None or (
+                isinstance(raw_value, float) and pd.isna(raw_value)):
+            return None
+
+        # Convert to string, normalize whitespace and non-breaking spaces
+        path_str = str(raw_value).replace("\u00a0", " ").strip()
+        if not path_str:
+            return None
+
+        looks_like_path = (any(
+            ch in path_str for ch in (os.sep, "/", "\\")) or os.path.isabs(
+            path_str) or "." in os.path.basename(
+            path_str) or self.files_base_dir is not None)
+
+        if not looks_like_path:
+            logger.info(
+                "Skipping files upload: value does not look like a path: %r",
+                path_str)
+            return None
+
+        resolved_path = Path(path_str).expanduser()
+
+        if not resolved_path.is_absolute() and self.files_base_dir:
+            resolved_path = (self.files_base_dir / resolved_path).resolve()
+
+        return resolved_path
+
+    def _attach_files (self, resource_id: Union[int, str],
+                       folder: Union[str, Path], recursive: bool = True,
+                       chunk_size: int = 10) -> None:
+
+        res_id = str(resource_id)
+        if not res_id.isdigit():
+            raise ValueError(
+                f"Invalid resource ID for upload: {resource_id!r}")
+
+        files = self._iter_files_in_dir(folder, recursive=recursive)
+        if not files:
+            logger.warning("No files to upload from: %s", folder)
+            return
+
+        def _mime_or_default (p: Path) -> str:
+            return mimetypes.guess_type(p.name)[
+                0] or "application/octet-stream"
+
+        def _send_batch (batch: List[Path]) -> bool:
+            payload = []
+            handles = []
+            try:
+                for fp in batch:
+                    fh = fp.open("rb")
+                    handles.append(fh)
+                    payload.append(
+                        ("files[]", (fp.name, fh, _mime_or_default(fp))))
+                try:
+                    resp = self.endpoint.post(endpoint_id=res_id,
+                                              sub_endpoint_name="uploads",
+                                              files=payload)
+                    resp.raise_for_status()
+                    return True
+                except Exception as exc:
+                    logger.info("Batched upload (%d files) failed: %s",
+                                len(batch), exc)
+                    return False
+            finally:
+                for h in handles:
+                    try:
+                        h.close()
+                    except Exception:
+                        pass
+
+        if chunk_size and chunk_size > 1:
+            i = 0
+            all_batches_ok = True
+            while i < len(files):
+                batch = files[i: i + chunk_size]
+                ok = _send_batch(batch)
+                if not ok:
+                    all_batches_ok = False
+                    break
+                i += chunk_size
+            if all_batches_ok:
+                logger.info("Uploaded %d files in %d batch(es).", len(files),
+                            (len(files) + chunk_size - 1) // chunk_size)
+                return
+
+        errors: List[str] = []
+        for fp in files:
+            try:
+                with fp.open("rb") as fh:
+                    resp = self.endpoint.post(endpoint_id=res_id,
+                                              sub_endpoint_name="uploads",
+                                              files=[("files[]", (fp.name, fh,
+                                                                  _mime_or_default(
+                                                                      fp)))])
+                try:
+                    resp.raise_for_status()
+                    continue
+                except Exception:
+                    with fp.open("rb") as fh2:
+                        resp2 = self.endpoint.post(endpoint_id=res_id,
+                                                   sub_endpoint_name="uploads",
+                                                   files={
+                                                       "file": (fp.name, fh2,
+                                                                _mime_or_default(
+                                                                    fp))
+                                                       })
+                    resp2.raise_for_status()
+            except Exception as exc:
+                logger.error("Failed to upload file %s to resource %s: %s", fp,
+                             res_id, exc)
+                errors.append(f"{fp}: {exc}")
+
+        if errors:
+            raise RuntimeError(
+                "One or more uploads failed:\n- " + "\n- ".join(errors))
 
     # --- Category handling ---
     def validate_category_id (self, cid: str) -> None:
@@ -87,7 +295,7 @@ class BaseImporter(ABC):
         no such column exists ``None`` is returned.  Concrete subclasses may
         override this method to enforce a specific column name.
         """
-        for c in self.df.columns:
+        for c in self.basic_df.columns:
             if canonicalize(c).startswith(
                     "categoryid") or "categoryid" in canonicalize(c):
                 return c
@@ -165,7 +373,7 @@ class BaseImporter(ABC):
         if not isinstance(row, pd.Series):
             try:
                 # Attempt to coerce to Series (e.g. from a namedtuple)
-                row = pd.Series(row._asdict())  # type: ignore[attr-defined]
+                row = pd.Series(row._asdict())
             except Exception:
                 return None
         title_col = self.cols_lower.get("title")
@@ -180,7 +388,7 @@ class BaseImporter(ABC):
         """Parse the tags column from a row into a list.
 
         Tags may be stored as a list/tuple/set, a pipe/semicolon/comma separated
-        string or any scalar value.  Empty or missing tags return an empty
+        string, or any scalar value.  Empty or missing tags return an empty
         list.
 
         :param row: A row from the CSV.
@@ -275,10 +483,9 @@ class BaseImporter(ABC):
                 if pd.isna(value):
                     val_str = ""
                 else:
-                    if hasattr(value, "item") and not isinstance(value,
-                                                                 str):  # type: ignore[attr-defined]
+                    if hasattr(value, "item") and not isinstance(value, str):
                         try:
-                            value = value.item()  # type: ignore[attr-defined]
+                            value = value.item()
                         except Exception:
                             pass
                     val_str = str(value)
