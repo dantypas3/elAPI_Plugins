@@ -11,8 +11,12 @@
     "file_path",
     "attachments_path",
     "attachments",
-    "folder with map and sequencing results",
-    "folder with attachments"
+    "attachment"
+  ],
+  "date_patterns": [
+    "%d.%m.%Y",
+    "%Y-%m-%d",
+    "%d/%m/%Y"
   ],
   "upload_chunk_size": 10
 }
