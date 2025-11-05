@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 import json
 import logging
 import mimetypes
@@ -332,6 +333,7 @@ class ResourcesImporter(BaseImporter):
         existing_json = self.get_existing_json(rid)
 
         raw_metadata = existing_json.get("metadata") or {}
+
         if isinstance(raw_metadata, str):
             try:
                 metadata = json.loads(raw_metadata)
@@ -344,6 +346,7 @@ class ResourcesImporter(BaseImporter):
             "extra_fields", {})
 
         defs_by_canon: Dict[str, str] = {}
+
         for orig_key in list(elab_extra_fields.keys()):
             c = canonicalize_field(orig_key)
             if c not in defs_by_canon:
@@ -359,12 +362,14 @@ class ResourcesImporter(BaseImporter):
             real_key = defs_by_canon[ckey]
             defn = elab_extra_fields.get(real_key) or {}
             coerced = self._coerce_for_field(defn, raw_val)
+
             if coerced is None:
                 logger.info(
                     "Skipping field %r: value %r not valid for options.",
                     real_key, raw_val)
                 continue
             slot = elab_extra_fields.get(real_key)
+
             if not isinstance(slot, dict):
                 elab_extra_fields[real_key] = {
                     "value": coerced
@@ -383,9 +388,12 @@ class ResourcesImporter(BaseImporter):
         payload = {
             "metadata": metadata_str
             }
+
         resp = self.endpoint.patch(endpoint_id=rid, data=payload)
+
         try:
             resp.raise_for_status()
+
         except Exception as exc:
             raise RuntimeError(
                 f"Failed to patch extra fields for resource {rid}: "
@@ -422,12 +430,43 @@ class ResourcesImporter(BaseImporter):
             if not pd.isna(body_val) and str(body_val).strip():
                 data["body"] = str(body_val)
 
+        date_col = self._find_col_like("date")
+
+        if date_col and date_col in row:
+            norm = self._normalize_date(row[date_col])
+            if norm:
+                data["date"] = norm
+            else:
+                print("Skipping date field due to unsupported format: %r",
+                      row[date_col])
+
         return data
+
+    @staticmethod
+    def _normalize_date (value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return None
+
+        s = str(value).strip()
+
+        if not s or (isinstance(value, float) and pd.isna(value)):
+            return None
+
+        for pattern in CONFIG["date_patterns"]:
+            try:
+                dt = datetime.datetime.strptime(s, pattern)
+                return dt.strftime("%Y-%m-%d")
+            except Exception:
+                continue
+
+        print("Unrecognized date format: %r", s)
+
+    def _extract_post_fields (self, row: pd.Series) -> Dict[str, Any]:
+        """Build the POST payload from all columns."""
 
     # ------------------- creation -------------------
     def create_new (self, row: pd.Series,
-                    template: Optional[Union[int, str]] = None,
-                    upload_single_file: bool = False) -> str:
+                    template: Optional[Union[int, str]] = None) -> str:
         payload = self._extract_known_post_fields(row, template)
         response = self.endpoint.post(data=payload)
         try:
