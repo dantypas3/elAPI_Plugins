@@ -8,10 +8,16 @@
 *.sqlite3
 *.parquet
 *.ipynb
+*.spec
+*.bac
 
 #Directories
 .idea/
 .vscode/
+.build/
+.flake8
+build/
+dist/
 __pycache__/
 venv/
 docs/
