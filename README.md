@@ -46,12 +46,23 @@ These scripts automatically check for a configured API token and, if none is fou
 
 ### macOS
 
-Double-click `run_gui.command` from the repository root or run it from Terminal. The script will:
+Mac users no longer need to run a .command file manually.
+The GUI is now distributed as a signed .dmg installer for easier setup and integration with the system.
 
-1. Create a `venv` directory
-2. Install the dependencies from `requirements.txt`
-3. Ensure an API token is configured (runs `elapi init` if needed)
-4. Launch `gui.gui`
+**To install:**
+1. Download the **latest .dmg** file from the _Releases Page_
+2. Double-click the .dmg to open it.
+3. Drag the application (e.g., elAPI_Plugins) into your Applications folder.
+4. Launch the app from Launchpad or Finder → Applications
+
+_Note:_
+1. On first launch, macOS may show a security prompt because the app isn’t from the App Store.
+To open it, right-click the app → “Open” → “Open Anyway.
+2. Ensure that elAPI is installed and initialized with a valid API key (elapi init) before starting the GUI.
+3. If macOS blocks installation or opening:
+    - Go to System Settings → Privacy & Security.
+    - Scroll to Security and allow the app to run.
+    - Reopen it from your Applications folder.
 
 ### Windows
 
