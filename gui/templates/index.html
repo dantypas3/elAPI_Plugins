@@ -170,5 +170,11 @@
     });
 </script>
 
+<script>
+  window.addEventListener("beforeunload", () => {
+    try { navigator.sendBeacon("/shutdown"); } catch (e) {}
+  });
+</script>
+
 </body>
 </html>

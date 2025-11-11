@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+# Build a self-contained macOS .app + DMG for ELAPI GUI.
+# Includes elapi/VERSION so elapi can determine its version at runtime.
+set -euo pipefail
+
+# Detect OS architecture (x86_64 or arm64)
+OS_ARCH=$(uname -m)
+case "$OS_ARCH" in
+  x86_64|arm64) : ;;
+  *) echo "Unsupported architecture: $OS_ARCH" >&2; exit 1 ;;
+esac
+
+APP_BASE="elAPI_Plugins"
+APP_NAME="${APP_BASE}_${OS_ARCH}"
+ENTRYPOINT="gui/gui.py"
+
+# Clean previous build artefacts
+rm -rf .build build dist
+
+# Fresh virtualenv for building
+python3 -m venv .build
+source .build/bin/activate
+python -m pip install --upgrade pip wheel setuptools
+pip install . pyinstaller
+
+# Sanity check: ensure Python we’re using matches OS arch (avoid Rosetta pitfalls)
+PY_ARCH=$(python - <<'PY'
+import platform
+print(platform.machine())
+PY
+)
+
+if [ "$PY_ARCH" != "$OS_ARCH" ]; then
+  echo "Python arch ($PY_ARCH) != OS arch ($OS_ARCH)."
+  echo "On Apple Silicon, ensure you use native arm64 Python (e.g., /opt/homebrew/bin/python3),"
+  echo "or remove Rosetta from the build shell. Aborting."
+  exit 1
+fi
+
+# Find elapi’s VERSION file inside the venv
+ELAPI_VERSION_FILE=$(python - <<'PY'
+import importlib.util, pathlib
+spec = importlib.util.find_spec('elapi')
+if spec is None:
+    raise SystemExit("elapi not found in this environment")
+print((pathlib.Path(spec.origin).parent / 'VERSION').resolve())
+PY
+)
+
+# Assemble data files
+DATA_ARGS="--add-data gui/templates:templates"
+[ -d "gui/static" ] && DATA_ARGS="$DATA_ARGS --add-data gui/static:static"
+DATA_ARGS="$DATA_ARGS --add-data $ELAPI_VERSION_FILE:elapi"
+[ -d "config" ] && DATA_ARGS="$DATA_ARGS --add-data config:config"
+
+# Optional icon
+ICON_ARG=""
+[ -f app.icns ] && ICON_ARG="--icon app.icns"
+
+# Build the .app
+python -m PyInstaller --clean --windowed \
+  --name "$APP_NAME" \
+  $ICON_ARG \
+  $DATA_ARGS \
+  "$ENTRYPOINT"
+
+echo "✅ App built: dist/${APP_NAME}.app"
+
+# Optional signing to reduce Gatekeeper prompts
+if command -v codesign >/dev/null 2>&1; then
+  codesign --deep --force --sign - "dist/${APP_NAME}.app" || true
+fi
+
+cd dist
+DMG_NAME="${APP_NAME}-macOS.dmg"
+hdiutil create -volname "$APP_BASE" \
+  -srcfolder "${APP_NAME}.app" \
+  -ov -format UDZO "$DMG_NAME"
+
+echo "📦 DMG created: $(pwd)/$DMG_NAME"
