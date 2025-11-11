@@ -10,7 +10,7 @@ case "$OS_ARCH" in
   *) echo "Unsupported architecture: $OS_ARCH" >&2; exit 1 ;;
 esac
 
-APP_BASE="ELAPI_GUI"
+APP_BASE="elAPI_Plugins"
 APP_NAME="${APP_BASE}_${OS_ARCH}"
 ENTRYPOINT="gui/gui.py"
 
