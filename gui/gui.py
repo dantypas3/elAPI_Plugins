@@ -5,8 +5,7 @@ import time
 import webbrowser
 from typing import Tuple, Union
 
-from flask import Flask, flash, redirect, render_template, request, send_file, \
-    url_for
+from flask import Flask, flash, redirect, render_template, request, send_file, url_for
 from werkzeug.serving import make_server
 from werkzeug.utils import secure_filename
 from werkzeug.wrappers.response import Response as WerkzeugResponse
@@ -26,9 +25,35 @@ UPLOAD_DIR = os.path.join(SCRIPT_DIR, "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 app.config["UPLOAD_FOLDER"] = UPLOAD_DIR
 
+# ── NEW: inactivity tracking & server handle ───────────────────────────────
+LAST_ACTIVITY = time.monotonic()
+SERVER = None  # will be assigned in __main__
 
+INACTIVITY_TIMEOUT_SEC = 5 * 60  # 5 minutes
+CHECK_INTERVAL_SEC = 5           # how often the watchdog checks
+
+@app.before_request
+def _touch_activity():
+    global LAST_ACTIVITY
+    LAST_ACTIVITY = time.monotonic()
+
+def _inactivity_watchdog(timeout=INACTIVITY_TIMEOUT_SEC, poll=CHECK_INTERVAL_SEC):
+    """Shut the server down if no requests arrive for `timeout` seconds."""
+    while True:
+        time.sleep(poll)
+        if time.monotonic() - LAST_ACTIVITY > timeout:
+            # Gracefully stop the server loop
+            if SERVER is not None:
+                try:
+                    SERVER.shutdown()
+                except Exception:
+                    pass
+            # No busy loop; allow serve_forever() to return
+            break
+
+# ── routes ─────────────────────────────────────────────────────────────────
 @app.route("/", methods=["GET", "POST"])
-def index () -> Union[str, WerkzeugResponse]:
+def index() -> Union[str, WerkzeugResponse]:
     categories = endpoints.get_fixed("categories").get().json()
     categories = sorted(categories, key=lambda c: c.get("title", "").lower())
 
@@ -47,11 +72,11 @@ def index () -> Union[str, WerkzeugResponse]:
             exporter = ExporterFactory.get_exporter("experiments")
             path = exporter.xlsx_export(fname)
             return send_file(path, as_attachment=True)
+
         elif action == "imports":
             cid = int(request.form["category"])
             import_path = request.form.get("import_path", "").strip()
-            import_target = (request.form.get(
-                "import_target") or "resources").strip().lower()
+            import_target = (request.form.get("import_target") or "resources").strip().lower()
 
             if import_path:
                 full_path = os.path.abspath(import_path)
@@ -71,28 +96,15 @@ def index () -> Union[str, WerkzeugResponse]:
 
             try:
                 if import_target == "resources":
-
-                    importer = ImporterFactory.get_importer("resources",
-                                                            csv_path=full_path,
-                                                            template=cid)
-
+                    importer = ImporterFactory.get_importer("resources", csv_path=full_path, template=cid)
                     ids = importer.create_all_from_csv()
                     count = len(ids)
-                    flash(f"Imported {count} resources from {source}",
-                          "success")
-
-                # elif import_target == "experiments":
-                #     ExperimentsCls = ImporterFactory.get_importer("experiments")
-                #     importer = ExperimentsCls(csv_path=full_path)
-                #     ids = importer.create_all_from_csv()
-                #     count = len(ids)
-
+                    flash(f"Imported {count} resources from {source}", "success")
                 else:
                     flash(f"Unknown import target: {import_target}", "error")
                     return redirect(url_for("index"))
 
-                flash(f"Imported {count} {import_target} from {source}",
-                      "success")
+                flash(f"Imported {count} {import_target} from {source}", "success")
             except Exception as e:
                 flash(f"Import failed: {e}", "error")
 
@@ -100,19 +112,36 @@ def index () -> Union[str, WerkzeugResponse]:
 
     return render_template("index.html", categories=categories)
 
-
+# ── NEW: shutdown endpoint (called from JS on window close) ────────────────
 @app.route("/shutdown", methods=["POST"])
-def shutdown () -> Tuple[str, int]:
+def shutdown() -> Tuple[str, int]:
+    def _do_shutdown():
+        if SERVER is not None:
+            try:
+                SERVER.shutdown()
+            except Exception:
+                pass
+    threading.Thread(target=_do_shutdown, daemon=True).start()
     return "OK", 200
 
-
-def _open_browser () -> None:
+# ── helpers ────────────────────────────────────────────────────────────────
+def _open_browser() -> None:
     time.sleep(1)
     webbrowser.open("http://127.0.0.1:5000")
 
-
+# ── main ───────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    server = make_server("127.0.0.1", 5000, app)
-    threading.Thread(target=server.serve_forever, daemon=True).start()
+    SERVER = make_server("127.0.0.1", 5000, app)
+
+    # Start browser and inactivity watchdog
     threading.Thread(target=_open_browser, daemon=True).start()
-    server.serve_forever()
+    threading.Thread(target=_inactivity_watchdog, daemon=True).start()
+
+    try:
+        # Serve in the main thread; returns when shutdown() is called
+        SERVER.serve_forever()
+    finally:
+        try:
+            SERVER.server_close()
+        except Exception:
+            pass

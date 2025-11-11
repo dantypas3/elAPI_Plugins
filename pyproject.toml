@@ -21,7 +21,8 @@ dependencies = [
   "beautifulsoup4>=4.13.4",
   "chardet>=5.2.0",
   "elapi>=2.3.3",
-  "openpyxl>=3.0.0"
+  "openpyxl>=3.0.0",
+  "responses>=0.25.8"
 ]
 
 [project.optional-dependencies]
