@@ -28,12 +28,7 @@ They are built on top of the official elAPI framework.
 
 - These tools depend on the external **elAPI** library. Install that library and configure API credentials as described
   in the elAPI README.
-- The utilities under `utils/` wrap elAPI’s endpoints and provide validation helpers. Scripts in `plugins/resources/`
-  depend on these utilities.
-- Files may lack trailing newlines (which may cause the shell prompt to appear immediately after the last line), but the
-  code itself is intact.
-- There are no tests or entry-point scripts; each module exposes functions (e.g., `create_resources`,
-  `patch_resources_from_csv`) that can be imported or run from a small driver script.
+- The import categories functionality is still under development
 
 ---
 
@@ -125,23 +120,6 @@ If you're not familiar with the command line, follow these steps:
      ```bash
      ./run_gui.vbs
      ```
-
----
-
-## Important Note for macOS Users (Permissions)
-
-If execution is blocked:
-
-1. Open **System Settings → Privacy & Security**
-2. Scroll down to the **Security** section and allow the blocked script
-3. In Terminal, run:
-   ```bash
-   sudo chmod +x run_gui.command
-   ```  
-4. Re-run the launcher:
-   ```bash
-   ./run_gui.command
-   ```
 
 ---
 
