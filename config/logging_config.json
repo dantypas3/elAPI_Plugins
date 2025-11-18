@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "disable_existing_loggers": false,
+  "formatters": {
+    "standard": {
+      "format": "%(asctime)s | %(levelname)s | %(name)s | %(message)s"
+    }
+  },
+  "handlers": {
+    "console": {
+      "class": "logging.StreamHandler",
+      "formatter": "standard",
+      "stream": "ext://sys.stdout"
+    },
+    "file_info": {
+      "class": "logging.handlers.RotatingFileHandler",
+      "formatter": "standard",
+      "filename": "log_file",
+      "maxBytes": 5000000,
+      "backupCount": 5,
+      "encoding": "utf-8"
+    },
+    "file_error": {
+      "class": "logging.handlers.RotatingFileHandler",
+      "formatter": "standard",
+      "filename": "error_log_file",
+      "maxBytes": 1000000,
+      "backupCount": 3,
+      "encoding": "utf-8",
+      "level": "ERROR"
+    }
+  },
+  "root": {
+    "level": "level",
+    "handlers": [
+      "console",
+      "file_info",
+      "file_error"
+    ]
+  },
+  "loggers": {
+    "elapi": {
+      "level": "WARNING",
+      "propagate": true
+    },
+    "urllib3": {
+      "level": "WARNING",
+      "propagate": true
+    }
+  }
+}
