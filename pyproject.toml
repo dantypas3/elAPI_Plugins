@@ -22,7 +22,8 @@ dependencies = [
   "chardet>=5.2.0",
   "elapi>=2.3.3",
   "openpyxl>=3.0.0",
-  "responses>=0.25.8"
+  "responses>=0.25.8",
+  "notebook>=7.4.7",
 ]
 
 [project.optional-dependencies]
