@@ -10,6 +10,11 @@
 *.ipynb
 *.spec
 *.bac
+*.egg-info
+*.lock
+
+mypy.ini
+ruff.toml
 
 #Directories
 .idea/
