@@ -26,6 +26,8 @@ UPLOAD_DIR = os.path.join(SCRIPT_DIR, "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 app.config["UPLOAD_FOLDER"] = UPLOAD_DIR
 
+server = None
+
 
 @app.route("/", methods=["GET", "POST"])
 def index() -> Union[str, WerkzeugResponse]:
@@ -103,7 +105,10 @@ def index() -> Union[str, WerkzeugResponse]:
 
 @app.route("/shutdown", methods=["POST"])
 def shutdown() -> Tuple[str, int]:
-  return "OK", 200
+  global server
+  if server:
+    threading.Thread(target=server.shutdown).start()
+  return "Shutting down", 200
 
 
 def _open_browser() -> None:
@@ -113,6 +118,9 @@ def _open_browser() -> None:
 
 if __name__ == "__main__":
   server = make_server("127.0.0.1", 5000, app)
-  threading.Thread(target=server.serve_forever, daemon=True).start()
+
   threading.Thread(target=_open_browser, daemon=True).start()
-  server.serve_forever()
+  try:
+    server.serve_forever()
+  except KeyboardInterrupt:
+    server.shutdown()
