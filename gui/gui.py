@@ -19,7 +19,7 @@ TEMPLATE_DIR = os.path.join(SCRIPT_DIR, "templates")
 if SCRIPT_DIR not in sys.path:
   sys.path.insert(0, SCRIPT_DIR)
 
-setup_logging()
+# setup_logging()
 
 app = Flask(__name__, template_folder=TEMPLATE_DIR)
 app.secret_key = os.urandom(24)
@@ -28,7 +28,6 @@ UPLOAD_DIR = os.path.join(SCRIPT_DIR, "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 app.config["UPLOAD_FOLDER"] = UPLOAD_DIR
 
-# ── NEW: inactivity tracking & server handle ───────────────────────────────
 LAST_ACTIVITY = time.monotonic()
 SERVER = None  # will be assigned in __main__
 

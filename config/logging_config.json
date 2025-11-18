@@ -46,6 +46,20 @@
     "urllib3": {
       "level": "WARNING",
       "propagate": true
+    },
+    "src.services.importers.resources_importer.ResourcesImporter": {
+      "level": "INFO",
+      "handlers": [
+        "file_resources_importer"
+      ],
+      "propagate": true
+    },
+    "src.services.importers.base_importer.BaseImporter": {
+      "level": "INFO",
+      "handlers": [
+        "file_base_importer"
+      ],
+      "propagate": true
     }
   }
 }
