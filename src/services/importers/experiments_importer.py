@@ -1,8 +1,9 @@
-import json
 from pathlib import Path
 from typing import Any, Union, Optional, Dict, List
 
 import pandas as pd
+import json
+
 from elapi.api import FixedEndpoint
 
 from src.utils.common import canonicalize
@@ -37,7 +38,7 @@ class ExperimentsImporter(BaseImporter):
     return self._experiments_df
 
   @property
-  def cols_lower(self) -> pd.DataFrame:
+  def cols_canon(self) -> pd.DataFrame:
     return self._cols_lower
 
   @property
@@ -95,7 +96,7 @@ class ExperimentsImporter(BaseImporter):
         elab_extra_fields[lk] = elab_extra_fields.pop(k)
 
     # TODO add $delete_v & $delete_f
-    for csv_idx, csv_value in self.cols_lower.items():
+    for csv_idx, csv_value in self.cols_canon.items():
       if csv_idx in existing_json:
         existing_json[
           csv_idx] = "" if csv_value == "$delete" else csv_value
