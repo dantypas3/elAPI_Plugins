@@ -3,8 +3,8 @@ from __future__ import annotations
 import logging
 import logging.config
 
-from utils.common import load_config
-from utils.paths import LOGGING_CONFIG, BASE_DIR
+from src.utils.common import load_config
+from src.utils.paths import LOGGING_CONFIG, BASE_DIR
 
 
 def setup_logging() -> None:
