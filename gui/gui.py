@@ -15,6 +15,7 @@ from werkzeug.wrappers.response import Response as WerkzeugResponse
 
 from src.factories import ExporterFactory, ImporterFactory
 from src.utils import endpoints
+from src.utils.common import paged_fetch
 
 # Extend PATH for Finder-launched app so external tools can be found
 if getattr(sys, 'frozen', False):
@@ -58,48 +59,25 @@ server = None
 @app.route("/", methods=["GET", "POST"])
 def index() -> Union[str, WerkzeugResponse]:
     endpoint = endpoints.get_fixed("categories")
-    offset = 0
-    page_size = 30
-    max_retries = 3
-    categories: list[dict] = []
 
-    # Fetch all categories from the API with simple retry logic
-    while True:
-        attempt = 0
-        current_limit = page_size
-        while True:
-            try:
-                response = endpoint.get(query={"limit": current_limit, "offset": offset})
-                response.raise_for_status()
-                data = response.json()
-                page = data["data"] if isinstance(data, dict) and "data" in data else data
-                break
-            except (ReadTimeout, ConnectTimeout):
-                if attempt >= max_retries:
-                    print(f"Timeout on offset {offset}. Skipping after {max_retries} retries.")
-                    page = []
-                    break
-                attempt += 1
-                sleep_s = 1.5 * attempt
-                current_limit = max(5, math.ceil(current_limit / 2))
-                print(
-                    f"Timeout on offset {offset}. Retry {attempt}/{max_retries} after {sleep_s:.1f}s"
-                    f" with limit={current_limit}…"
-                )
-                time.sleep(sleep_s)
+    def get_page(limit: int, offset: int) -> list[dict]:
+        response = endpoint.get(query={"limit": limit, "offset": offset})
+        response.raise_for_status()
+        data = response.json()
+        page = data["data"] if isinstance(data, dict) and "data" in data else data
+        return list(page)
 
-        if not page:
-            if attempt >= max_retries:
-                offset += current_limit
-                continue
-            break
-
-        categories.extend(page)
-        print(f"Fetched {len(page)} categories (total: {len(categories)})")
-
-        if len(page) < current_limit:
-            break
-        offset += current_limit
+    categories = list(
+        paged_fetch(
+            get_page,
+            start_offset=0,
+            page_size=30,
+            max_retries=3,
+            on_progress=lambda n, off, lim: print(
+                f"Fetched {n} categories (offset={off}, limit={lim})"
+            ),
+        )
+    )
 
     categories = sorted(categories, key=lambda c: c.get("title", "").lower())
 
@@ -141,10 +119,11 @@ def index() -> Union[str, WerkzeugResponse]:
 
             try:
                 if import_target == "resources":
-                    importer = ImporterFactory.get_importer("resources", csv_path=full_path, template=cid)
+                    importer = ImporterFactory.get_importer(
+                        "resources", csv_path=full_path, template=cid
+                    )
                     ids = importer.create_all_from_csv()
                     count = len(ids)
-                    flash(f"Imported {count} resources from {source}", "success")
                 else:
                     flash(f"Unknown import target: {import_target}", "error")
                     return redirect(url_for("index"))
