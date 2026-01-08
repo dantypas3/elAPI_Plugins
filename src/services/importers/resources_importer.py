@@ -5,7 +5,7 @@ import logging
 import mimetypes
 import os
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple, Union
+from typing import Any, Dict, Iterable, List, Optional, Union
 
 import elapi.api
 import pandas as pd
@@ -13,6 +13,7 @@ import pandas as pd
 from src.utils.common import canonicalize as canonicalize_field
 from src.utils.csv_tools import CsvTools
 from src.utils.endpoints import get_fixed
+from src.utils.logging_config import setup_logging
 from src.utils.paths import RES_IMPORTER_CONFIG
 from .base_importer import BaseImporter
 
@@ -41,14 +42,16 @@ class ResourcesImporter(BaseImporter):
     template_id: Optional[Union[int, str]] = None
   ) -> None:
 
+    setup_logging()
     self._endpoint: elapi.api.FixedEndpoint = get_fixed("resources")
     self._resources_df: pd.DataFrame = CsvTools.csv_to_df(csv_path)
     self._cols_canon: Dict[str, str] = self._canonicalize_column_indexes(self._resources_df.columns)
     self._template_id: Optional[Union[int, str]] = template_id
-    #  self._category_col: Optional[str] = self._find_col_like("category_id")
+    self._category_col: Optional[str] = self.resolve_category_col()
     self._files_base_dir: Optional[Path] = Path(files_base_dir).expanduser() if files_base_dir else None
     self._new_resources_counter: int = 0
     self._patched_resources_counter: int = 0
+    logger.info("Loaded resources CSV with %d rows", len(self._resources_df))
 
   # ------------------- base overrides -------------------
   @property
@@ -62,6 +65,10 @@ class ResourcesImporter(BaseImporter):
   @property
   def endpoint(self) -> elapi.api.FixedEndpoint:
     return self._endpoint
+
+  @property
+  def files_base_dir(self) -> Optional[Path]:
+    return self._files_base_dir
 
   #
   # @property
@@ -107,6 +114,7 @@ class ResourcesImporter(BaseImporter):
     mime = mimetypes.guess_type(fp.name)[0] or "application/octet-stream"
 
     try:
+      logger.debug("Uploading single file %s to resource %s", fp, rid)
       with fp.open("rb") as fh:
         resp = self.endpoint.post(endpoint_id=rid,
                                   sub_endpoint_name="uploads", files=[
@@ -131,17 +139,9 @@ class ResourcesImporter(BaseImporter):
     self, resource_id: Union[int, str],
     folder: Union[str, Path]
   ) -> None:
-    rid = str(resource_id)
-    chunk_size = CONFIG["upload_chunk_size"]
-
-    if not rid.isdigit():
-      raise ValueError(
-        f"Invalid resource ID for upload: {resource_id!r}")
-
-    files = self._iter_files_in_dir(folder)
-    if not files:
-      logger.warning("No files to upload from: %s", folder)
-      return
+    chunk_size = CONFIG.get("upload_chunk_size", 10)
+    self._attach_files(resource_id, folder, recursive=True,
+                       chunk_size=chunk_size)
 
   # ------------------- extra fields -------------------
   def _collect_csv_extra_fields(
@@ -268,6 +268,7 @@ class ResourcesImporter(BaseImporter):
       logger.info("No matching extra fields to upload for resource %s.",
                   rid)
       return
+    logger.debug("Patching extra fields for resource %s: %s", rid, list(changed.keys()))
 
     metadata_str = json.dumps(metadata, ensure_ascii=False,
                               separators=(",", ":"))
@@ -300,10 +301,14 @@ class ResourcesImporter(BaseImporter):
     if effective_template is not None:
       data["template"] = effective_template
 
-    if self._category_col and self._category_col in row:
-      cat_val = row[self._category_col]
-      if not (isinstance(cat_val, float) and pd.isna(cat_val)):
-        data["category"] = cat_val
+    if title := self._get_title(row):
+      data["title"] = title
+
+    if tags := self.get_tags(row):
+      data["tags"] = tags
+
+    if category_id := self.get_category_id(row):
+      data["category"] = category_id
 
     body_col = self._find_col_like("body")
 
@@ -318,6 +323,7 @@ class ResourcesImporter(BaseImporter):
   def create_new(self, row: pd.Series, template: Optional[Union[int, str]] = None) -> str:
 
     payload = self._extract_known_post_fields(row, template)
+    logger.debug("Creating resource with payload fields: %s", list(payload.keys()))
     response = self.endpoint.post(data=payload)
 
     try:
@@ -328,6 +334,7 @@ class ResourcesImporter(BaseImporter):
         f"Creation of {title!r} failed with status {response.status_code}: {response.text}") from exc
 
     resource_id = str(self.get_elab_id(response))
+    logger.info("Created resource %s", resource_id)
 
     path_col = self._find_path_col()
     if path_col and path_col in row:
@@ -384,6 +391,7 @@ class ResourcesImporter(BaseImporter):
     response = self.endpoint.patch(endpoint_id=experiment_id, data=payload)
     response.raise_for_status()
 
+    logger.info("Patched resource %s", experiment_id)
     return response.status_code
 
   # ------------------- bulk -------------------
@@ -394,6 +402,6 @@ class ResourcesImporter(BaseImporter):
     List[str]:
     """Create every resource from the CSV, optionally overriding template per call."""
     ids: List[str] = []
-    for _, row in self.df.iterrows():
+    for _, row in self.basic_df.iterrows():
       ids.append(self.create_new(row=row, template=template))
     return ids

@@ -3,7 +3,7 @@
   "disable_existing_loggers": false,
   "formatters": {
     "standard": {
-      "format": "%(asctime)s | %(levelname)s | %(name)s | %(message)s"
+      "format": "%(asctime)s | %(levelname)s | %(name)s | %(filename)s:%(lineno)d | %(message)s"
     }
   },
   "handlers": {
@@ -15,7 +15,7 @@
     "file_info": {
       "class": "logging.handlers.RotatingFileHandler",
       "formatter": "standard",
-      "filename": "log_file",
+      "filename": "app.log",
       "maxBytes": 5000000,
       "backupCount": 5,
       "encoding": "utf-8"
@@ -23,7 +23,7 @@
     "file_error": {
       "class": "logging.handlers.RotatingFileHandler",
       "formatter": "standard",
-      "filename": "error_log_file",
+      "filename": "error.log",
       "maxBytes": 1000000,
       "backupCount": 3,
       "encoding": "utf-8",
@@ -31,7 +31,7 @@
     }
   },
   "root": {
-    "level": "level",
+    "level": "INFO",
     "handlers": [
       "console",
       "file_info",
@@ -47,18 +47,20 @@
       "level": "WARNING",
       "propagate": true
     },
-    "src.services.importers.resources_importer.ResourcesImporter": {
+    "src.services.importers": {
       "level": "INFO",
-      "handlers": [
-        "file_resources_importer"
-      ],
       "propagate": true
     },
-    "src.services.importers.base_importer.BaseImporter": {
+    "src.services.exporters": {
       "level": "INFO",
-      "handlers": [
-        "file_base_importer"
-      ],
+      "propagate": true
+    },
+    "httpx": {
+      "level": "WARNING",
+      "propagate": true
+    },
+    "requests": {
+      "level": "WARNING",
       "propagate": true
     }
   }
