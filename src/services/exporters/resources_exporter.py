@@ -1,4 +1,5 @@
 import json
+import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -8,18 +9,23 @@ from werkzeug.utils import secure_filename
 
 from src.utils.common import strip_html
 from src.utils.endpoints import get_fixed
+from src.utils.logging_config import setup_logging
 from src.utils.validators import IDValidator
 from .base_exporter import BaseExporter
+
+logger = logging.getLogger(__name__)
 
 
 class ResourceExporter(BaseExporter):
   def __init__(self, category_id: int) -> None:
+    setup_logging()
     self._category_id = category_id
     self._endpoint = get_fixed("resources")
 
   def xlsx_export(self, export_file: Optional[str] = None) -> Path:
     IDValidator("categories", self._category_id).validate()
 
+    logger.info("Fetching resources for category %s", self._category_id)
     resources = self._endpoint.get(query={
       "cat": self._category_id,
       "limit": 1000
@@ -65,5 +71,5 @@ class ResourceExporter(BaseExporter):
 
     out_path.parent.mkdir(exist_ok=True, parents=True)
     df_final.to_excel(out_path, index=False)
-    print(f"Exported {len(df_final)} resources to {out_path}")
+    logger.info("Exported %d resources to %s", len(df_final), out_path)
     return out_path

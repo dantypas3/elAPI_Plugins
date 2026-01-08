@@ -1,28 +1,28 @@
 import json
-import math
-import time
+import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
 import pandas as pd
-from httpx import ReadTimeout, ConnectTimeout
-from requests import ReadTimeout, ConnectTimeout
 from werkzeug.utils import secure_filename
 
 from src.utils.common import strip_html, paged_fetch
 from src.utils.endpoints import get_fixed
+from src.utils.logging_config import setup_logging
 from .base_exporter import BaseExporter
+
+logger = logging.getLogger(__name__)
 
 
 class ExperimentsExporter(BaseExporter):
     def __init__ (self) -> None:
+        setup_logging()
         self._endpoint = get_fixed("experiments")
-
-    import pandas as pd
 
     def fetch_data (self, start_offset=0, page_size=30,
                     max_retries=3) -> pd.DataFrame:
+        logger.info("Fetching experiments with page_size=%d start_offset=%d", page_size, start_offset)
         def get_page (limit: int, offset: int) -> list[dict]:
             resp = self._endpoint.get(query={
                 "limit": limit,
@@ -41,13 +41,14 @@ class ExperimentsExporter(BaseExporter):
                 max_retries=max_retries,
                 )
             )
+        logger.info("Fetched %d experiments", len(rows))
         return pd.DataFrame(rows)
 
     def process_data (self) -> pd.DataFrame:
         df = self.fetch_data()
 
         if df.empty:
-            print("No experiments to export")
+            logger.info("No experiments to export")
             return pd.DataFrame()
 
         cols_to_drop = ["userid", "created_at", "state", "content_type",
@@ -94,5 +95,5 @@ class ExperimentsExporter(BaseExporter):
 
         out_path.parent.mkdir(exist_ok=True, parents=True)
         export_data.to_excel(out_path, index=False)
-        print(f"Exported {len(export_data)} experiments to {out_path}")
+        logger.info("Exported %d experiments to %s", len(export_data), out_path)
         return out_path

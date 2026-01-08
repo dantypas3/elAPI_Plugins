@@ -2,19 +2,42 @@ from __future__ import annotations
 
 import logging
 import logging.config
+import os
+from typing import Optional, Union
 
 from src.utils.common import load_config
 from src.utils.paths import LOGGING_CONFIG, BASE_DIR
 
 
-def setup_logging() -> None:
+def _coerce_level(level: Optional[Union[str, int]]) -> Optional[Union[str, int]]:
+  if level is None:
+    return None
+  if isinstance(level, int):
+    return level
+  level_str = str(level).strip().upper()
+  if not level_str:
+    return None
+  if level_str.isdigit():
+    return int(level_str)
+  return level_str
+
+
+def setup_logging(level: Optional[Union[str, int]] = None, force: bool = False) -> None:
   """
   Load logging configuration from JSON file.
   """
-  if getattr(setup_logging, "_configured", False):
+  if getattr(setup_logging, "_configured", False) and not force:
     return
 
   logging_config = load_config(LOGGING_CONFIG)
+
+  env_level = os.getenv("ELAPI_LOG_LEVEL") or os.getenv("LOG_LEVEL")
+  desired_level = _coerce_level(level or env_level)
+
+  if desired_level is not None:
+    logging_config.setdefault("root", {})["level"] = desired_level
+  elif str(logging_config.get("root", {}).get("level", "")).lower() == "level":
+    logging_config.setdefault("root", {})["level"] = "INFO"
 
   for handler in logging_config.get("handlers", {}).values():
     filename = handler.get("filename")

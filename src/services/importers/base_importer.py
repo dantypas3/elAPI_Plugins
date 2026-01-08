@@ -105,7 +105,7 @@ class BaseImporter(ABC):
       except ValueError:
         continue
 
-    print("Unrecognized date format: %r", date_str)
+    logger.warning("Unrecognized date format: %r", date_str)
     return None
 
     # --- Required API ---
@@ -128,9 +128,29 @@ class BaseImporter(ABC):
     """Return the endpoint used to interact with ElabFTW."""
     raise NotImplementedError
 
+  @property
+  def files_base_dir(self) -> Optional[Path]:
+    """Optional base directory for resolving relative file paths."""
+    return None
+
+  @property
+  def df(self) -> pd.DataFrame:
+    """Alias for the backing DataFrame used by some importers."""
+    return self.basic_df
+
+  def _find_col_like(self, name: str) -> Optional[str]:
+    """Find a column whose canonical form matches or contains ``name``."""
+    target = canonicalize(name)
+    if target in self.cols_canon:
+      return self.cols_canon[target]
+    for canon_col, original in self.cols_canon.items():
+      if target in canon_col or canon_col in target:
+        return original
+    return None
+
     # ------------------- files helpers -------------------
 
-  def _iter_files_in_dir(self, folder: Union[str, Path]) -> List[Path]:
+  def _iter_files_in_dir(self, folder: Union[str, Path], recursive: bool = True) -> List[Path]:
 
     path = Path(str(folder)).expanduser()
 
@@ -139,7 +159,10 @@ class BaseImporter(ABC):
         "Files folder does not exist or is not a directory: %s", path)
       return []
 
-    files = [f for f in path.rglob("*") if f.is_file()]
+    if recursive:
+      files = [f for f in path.rglob("*") if f.is_file()]
+    else:
+      files = [f for f in path.iterdir() if f.is_file()]
 
     if not files:
       logger.warning("No files found in folder: %s", path)
@@ -189,6 +212,7 @@ class BaseImporter(ABC):
       raise ValueError(
         f"Invalid resource ID for upload: {resource_id!r}")
 
+    logger.info("Uploading files for resource %s from %s", res_id, folder)
     files = self._iter_files_in_dir(folder, recursive=recursive)
     if not files:
       logger.warning("No files to upload from: %s", folder)
@@ -212,6 +236,7 @@ class BaseImporter(ABC):
                                     sub_endpoint_name="uploads",
                                     files=payload)
           resp.raise_for_status()
+          logger.debug("Uploaded batch of %d files for resource %s", len(batch), res_id)
           return True
         except Exception as exc:
           logger.info("Batched upload (%d files) failed: %s",
@@ -242,6 +267,7 @@ class BaseImporter(ABC):
     errors: List[str] = []
     for fp in files:
       try:
+        logger.debug("Uploading file %s to resource %s", fp, res_id)
         with fp.open("rb") as fh:
           resp = self.endpoint.post(endpoint_id=res_id,
                                     sub_endpoint_name="uploads",
@@ -401,6 +427,7 @@ class BaseImporter(ABC):
       error occurs or no JSON is returned.
     """
     try:
+      logger.debug("Fetching existing JSON for id %s", elab_id)
       response = self.endpoint.get(endpoint_id=elab_id)
       response_json = response.json()
       if isinstance(response_json, dict):
@@ -452,6 +479,7 @@ class BaseImporter(ABC):
     extra_map = self.fetch_extra_fields_mapping(existing)
     if not extra_map:
       return
+    updated_fields: List[str] = []
     for column in row.index:
       canon_col = canonicalize(column)
       if canon_col in extra_map and canon_col not in known_columns:
@@ -466,12 +494,14 @@ class BaseImporter(ABC):
               pass
           val_str = str(value)
         extra_map[canon_col]["value"] = val_str
+        updated_fields.append(canon_col)
     patch_data = {
       "metadata": {
         "extra_fields": list(extra_map.values())
       }
     }
     try:
+      logger.debug("Patching extra fields for id %s: %s", elab_id, updated_fields)
       response = self.endpoint.patch(endpoint_id=elab_id,
                                      data=patch_data)
       response.raise_for_status()

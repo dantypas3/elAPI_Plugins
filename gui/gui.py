@@ -1,3 +1,4 @@
+import logging
 import os
 import sys
 import threading
@@ -16,6 +17,11 @@ from werkzeug.wrappers.response import Response as WerkzeugResponse
 from src.factories import ExporterFactory, ImporterFactory
 from src.utils import endpoints
 from src.utils.common import paged_fetch
+from src.utils.logging_config import setup_logging
+
+LOG_LEVEL = "DEBUG"
+setup_logging(level=LOG_LEVEL, force=True)
+logger = logging.getLogger(__name__)
 
 # Extend PATH for Finder-launched app so external tools can be found
 if getattr(sys, 'frozen', False):
@@ -73,8 +79,8 @@ def index() -> Union[str, WerkzeugResponse]:
             start_offset=0,
             page_size=30,
             max_retries=3,
-            on_progress=lambda n, off, lim: print(
-                f"Fetched {n} categories (offset={off}, limit={lim})"
+            on_progress=lambda n, off, lim: logger.info(
+                "Fetched %d categories (offset=%d, limit=%d)", n, off, lim
             ),
         )
     )
