@@ -1,0 +1,88 @@
+from __future__ import annotations
+
+from pathlib import Path
+
+import pandas as pd
+import pytest
+
+from tests.conftest import FakeEndpoint, FakeResponse, write_csv
+from src.services.importers import resources_importer as res_module
+
+
+def test_create_new_with_files(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    def fake_post(**kwargs):
+        return FakeResponse(headers={"Location": "http://x/resources/99"})
+
+    monkeypatch.setattr(res_module, "get_fixed", lambda name: FakeEndpoint(post=fake_post))
+
+    files_dir = tmp_path / "files"
+    files_dir.mkdir()
+    (files_dir / "a.txt").write_text("x", encoding="utf-8")
+
+    csv_path = write_csv(
+        tmp_path / "res.csv",
+        ["title", "attachments"],
+        [["t", str(files_dir)]],
+    )
+    importer = res_module.ResourcesImporter(csv_path)
+
+    called = {"attach": 0, "single": 0, "extra": 0}
+
+    def fake_attach(*args, **kwargs):
+        called["attach"] += 1
+
+    def fake_single(*args, **kwargs):
+        called["single"] += 1
+
+    def fake_extra(*args, **kwargs):
+        called["extra"] += 1
+
+    monkeypatch.setattr(importer, "attach_files", fake_attach)
+    monkeypatch.setattr(importer, "attach_single_file", fake_single)
+    monkeypatch.setattr(importer, "post_extra_fields_from_row", fake_extra)
+
+    resource_id = importer.create_new(importer.basic_df.iloc[0])
+
+    assert resource_id == "99"
+    assert called["attach"] == 1
+    assert called["single"] == 0
+    assert called["extra"] == 1
+
+
+def test_post_extra_fields_from_row(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    def fake_get(**kwargs):
+        return FakeResponse(
+            json_data={
+                "metadata": {
+                    "extra_fields": {
+                        "Extra Field": {"type": "text"}
+                    }
+                }
+            }
+        )
+
+    captured = {}
+
+    def fake_patch(**kwargs):
+        captured["data"] = kwargs.get("data")
+        return FakeResponse()
+
+    monkeypatch.setattr(res_module, "get_fixed", lambda name: FakeEndpoint(get=fake_get, patch=fake_patch))
+
+    csv_path = write_csv(
+        tmp_path / "res.csv",
+        ["title", "extra field"],
+        [["t", "value"]],
+    )
+    importer = res_module.ResourcesImporter(csv_path)
+
+    row = importer.basic_df.iloc[0]
+    importer.post_extra_fields_from_row("1", row, known_columns={"title"})
+
+    assert "metadata" in captured["data"]
+
+
+def test_coerce_select_field() -> None:
+    defn = {"type": "select", "allow_multi_values": True, "options": ["A", "B"]}
+    coerced = res_module.ResourcesImporter._coerce_for_field(defn, "a, B")
+    assert coerced == ["A", "B"]
