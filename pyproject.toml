@@ -24,6 +24,7 @@ dependencies = [
   "openpyxl>=3.0.0",
   "responses>=0.25.8",
   "notebook>=7.4.7",
+  "pytest>=9.0.2",
 ]
 
 [project.optional-dependencies]

@@ -1,0 +1,103 @@
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Optional
+
+import pandas as pd
+import pytest
+
+from tests.conftest import FakeEndpoint, FakeResponse
+from src.services.importers.base_importer import BaseImporter
+
+
+class DummyImporter(BaseImporter):
+    def __init__(self, df: pd.DataFrame, files_base_dir: Optional[Path] = None) -> None:
+        self._df = df
+        self._cols_canon = {c.lower().replace(" ", ""): c for c in df.columns}
+        self._files_base_dir = files_base_dir
+        self._endpoint = FakeEndpoint()
+
+    @property
+    def basic_df(self) -> pd.DataFrame:
+        return self._df
+
+    @property
+    def cols_canon(self) -> dict[str, str]:
+        return self._cols_canon
+
+    @property
+    def endpoint(self):
+        return self._endpoint
+
+    @property
+    def files_base_dir(self) -> Optional[Path]:
+        return self._files_base_dir
+
+
+def test_normalize_id() -> None:
+    df = pd.DataFrame({"id": [1]})
+    imp = DummyImporter(df)
+    assert imp.normalize_id(None) is None
+    assert imp.normalize_id(float("nan")) is None
+    assert imp.normalize_id(1.0) == "1"
+    assert imp.normalize_id("  ") is None
+
+
+def test_get_tags_parsing() -> None:
+    df = pd.DataFrame({"Tags": ["a,b"]})
+    imp = DummyImporter(df)
+    row = pd.Series({"Tags": "a; b | c"})
+    imp._cols_canon = {"tags": "Tags"}
+    tags = imp.get_tags(row)
+    assert tags == ["a", "b | c"] or tags == ["a", "b", "c"]
+
+
+def test_get_category_id() -> None:
+    df = pd.DataFrame({"Category ID": ["12"]})
+    imp = DummyImporter(df)
+    row = pd.Series({"Category ID": "12"})
+    assert imp.get_category_id(row) == "12"
+    with pytest.raises(ValueError):
+        imp.get_category_id(pd.Series({"Category ID": "abc"}))
+
+
+def test_find_col_like() -> None:
+    df = pd.DataFrame({"Body Text": ["x"], "Title": ["y"]})
+    imp = DummyImporter(df)
+    assert imp._find_col_like("body") == "Body Text"
+    assert imp._find_col_like("title") == "Title"
+
+
+def test_resolve_folder_with_base(tmp_path: Path) -> None:
+    df = pd.DataFrame({"id": [1]})
+    imp = DummyImporter(df, files_base_dir=tmp_path)
+    resolved = imp._resolve_folder("subdir/file.txt")
+    assert resolved == (tmp_path / "subdir" / "file.txt").resolve()
+
+
+def test_update_extra_fields_from_row(monkeypatch: pytest.MonkeyPatch) -> None:
+    df = pd.DataFrame({"Extra Field": ["value"]})
+    imp = DummyImporter(df)
+
+    def fake_get(**kwargs):
+        return FakeResponse(
+            json_data={
+                "metadata_decoded": {
+                    "extra_fields": [
+                        {"title": "Extra Field", "value": ""}
+                    ]
+                }
+            }
+        )
+
+    captured = {}
+
+    def fake_patch(**kwargs):
+        captured["data"] = kwargs.get("data")
+        return FakeResponse()
+
+    imp._endpoint = FakeEndpoint(get=fake_get, patch=fake_patch)
+    row = pd.Series({"Extra Field": "updated"})
+
+    imp.update_extra_fields_from_row("1", row, known_columns=set())
+    assert "metadata" in captured["data"]
