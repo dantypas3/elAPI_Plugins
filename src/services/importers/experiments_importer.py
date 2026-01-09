@@ -30,8 +30,6 @@ class ExperimentsImporter(BaseImporter):
     self._category_col: Optional[str] = self.resolve_category_col()
     logger.info("Loaded experiments CSV with %d rows", len(self._experiments_df))
 
-  # ---- Hooks required by BaseImporter ----
-
   @property
   def basic_df(self) -> pd.DataFrame:
     return self._experiments_df
@@ -44,7 +42,6 @@ class ExperimentsImporter(BaseImporter):
   def endpoint(self) -> FixedEndpoint:
     return self._endpoint
 
-  # --- Helpers ---
   def _get_body(self, row: pd.Series) -> Optional[str]:
     body_col = self._find_col_like("body")
     if not body_col or body_col not in row:
@@ -55,7 +52,6 @@ class ExperimentsImporter(BaseImporter):
     body_str = str(body_val).strip()
     return body_str if body_str else None
 
-  # --- Experiment-specific logic ----
   def create_new(
     self, title: Optional[str], tags: List[str],
     template: str = ""

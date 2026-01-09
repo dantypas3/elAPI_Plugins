@@ -16,7 +16,7 @@ from .base_exporter import BaseExporter
 logger = logging.getLogger(__name__)
 
 
-class ResourceExporter(BaseExporter):
+class ResourcesExporter(BaseExporter):
   def __init__(self, category_id: int) -> None:
     setup_logging()
     self._category_id = category_id

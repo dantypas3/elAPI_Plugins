@@ -10,6 +10,7 @@ from src.utils.paths import LOGGING_CONFIG, BASE_DIR
 
 
 def _coerce_level(level: Optional[Union[str, int]]) -> Optional[Union[str, int]]:
+  """Coerce input to a logging level or None."""
   if level is None:
     return None
   if isinstance(level, int):
@@ -23,15 +24,13 @@ def _coerce_level(level: Optional[Union[str, int]]) -> Optional[Union[str, int]]
 
 
 def setup_logging(level: Optional[Union[str, int]] = None, force: bool = False) -> None:
-  """
-  Load logging configuration from JSON file.
-  """
+  """Load logging config from JSON once, honoring LOG_LEVEL env/override."""
   if getattr(setup_logging, "_configured", False) and not force:
     return
 
   logging_config = load_config(LOGGING_CONFIG)
 
-  env_level = os.getenv("ELAPI_LOG_LEVEL") or os.getenv("LOG_LEVEL")
+  env_level = os.getenv("LOG_LEVEL")
   desired_level = _coerce_level(level or env_level)
 
   if desired_level is not None:

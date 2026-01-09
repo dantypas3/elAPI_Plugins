@@ -53,7 +53,6 @@ class ResourcesImporter(BaseImporter):
     self._patched_resources_counter: int = 0
     logger.info("Loaded resources CSV with %d rows", len(self._resources_df))
 
-  # ------------------- base overrides -------------------
   @property
   def basic_df(self) -> pd.DataFrame:
     return self._resources_df
@@ -69,13 +68,6 @@ class ResourcesImporter(BaseImporter):
   @property
   def files_base_dir(self) -> Optional[Path]:
     return self._files_base_dir
-
-  #
-  # @property
-  # def category_col(self) -> Optional[str]:
-  #   return self._category_col
-
-  # ------------------- files helpers -------------------
 
   def _resolve_folder(self, value: Union[str, Path]) -> Optional[Path]:
     if value is None or (isinstance(value, float) and pd.isna(value)):
@@ -101,7 +93,7 @@ class ResourcesImporter(BaseImporter):
     self, resource_id: Union[int, str],
     file: Union[str, Path]
   ) -> None:
-    """Upload a single file to the resource; try 'files[]' first then fallback to 'file'."""
+    """Upload a single file; prefer 'files[]', fallback to 'file'."""
     rid = str(resource_id)
     if not rid.isdigit():
       raise ValueError(
@@ -143,7 +135,6 @@ class ResourcesImporter(BaseImporter):
     self._attach_files(resource_id, folder, recursive=True,
                        chunk_size=chunk_size)
 
-  # ------------------- extra fields -------------------
   def _collect_csv_extra_fields(
     self, row: pd.Series,
     known_columns: Optional[
@@ -214,7 +205,7 @@ class ResourcesImporter(BaseImporter):
     row: pd.Series, known_columns: Optional[
       Iterable[str]] = None
   ) -> None:
-    """Intersect CSV extras with template fields, coerce types, and PATCH metadata (as JSON string)."""
+    """Match CSV extras to template fields, coerce, and patch metadata JSON."""
     rid = str(resource_id)
     existing_json = self.get_existing_json(rid)
 
@@ -286,13 +277,11 @@ class ResourcesImporter(BaseImporter):
         f"Failed to patch extra fields for resource {rid}: "
         f"{getattr(resp, 'status_code', '?')} {getattr(resp, 'text', '')}") from exc
 
-  # ------------------- payload construction -------------------
-
   def _extract_known_post_fields(
     self, row: pd.Series,
     template: Optional[Union[int, str]]
   ) -> Dict[str, Any]:
-    """Build the POST payload from known columns (title, tags, category, body, template)."""
+    """Build POST payload from standard columns (title, tags, category, body, template)."""
 
     data: Dict[str, Any] = {}
 
@@ -319,7 +308,6 @@ class ResourcesImporter(BaseImporter):
 
     return data
 
-  # ------------------- creation -------------------
   def create_new(self, row: pd.Series, template: Optional[Union[int, str]] = None) -> str:
 
     payload = self._extract_known_post_fields(row, template)
@@ -355,8 +343,7 @@ class ResourcesImporter(BaseImporter):
     self._new_resources_counter += 1
     return resource_id
 
-  # ------------------- patch existing -------------------
-  def patch_existing(self, experiment_id: str, category: str, row: pd.Series) -> Any:
+  def patch_existing(self, resource_id: str, category: str, row: pd.Series) -> Any:
 
     payload: Dict[str, Any] = {"category": category}
 
@@ -369,7 +356,7 @@ class ResourcesImporter(BaseImporter):
     if date := self._normalize_date(row):
       payload["date"] = date
 
-    existing_json = self.get_existing_json(experiment_id)
+    existing_json = self.get_existing_json(resource_id)
     raw_metadata = existing_json.get("metadata") or {}
 
     if isinstance(raw_metadata, str):
@@ -388,19 +375,18 @@ class ResourcesImporter(BaseImporter):
 
     payload["metadata"] = metadata_str
 
-    response = self.endpoint.patch(endpoint_id=experiment_id, data=payload)
+    response = self.endpoint.patch(endpoint_id=resource_id, data=payload)
     response.raise_for_status()
 
-    logger.info("Patched resource %s", experiment_id)
+    logger.info("Patched resource %s", resource_id)
     return response.status_code
 
-  # ------------------- bulk -------------------
   def create_all_from_csv(
     self,
     template: Optional[Union[int, str]] = None
   ) -> \
     List[str]:
-    """Create every resource from the CSV, optionally overriding template per call."""
+    """Create every resource row in the CSV; optional template override per call."""
     ids: List[str] = []
     for _, row in self.basic_df.iterrows():
       ids.append(self.create_new(row=row, template=template))

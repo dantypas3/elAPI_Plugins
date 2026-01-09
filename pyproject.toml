@@ -1,10 +1,8 @@
 [project]
 name = "elapi-plugins"
 version = "0.1.0"
-description = """
-Plugin tools for eLabFTW and Labfolder migration,
-developed as part of the INF Project of CRC 1638 at Heidelberg University
-"""
+description = "Plugin tools for eLabFTW and Labfolder migration, developed as part of the INF Project of CRC 1638 at Heidelberg University"
+
 authors = [
   { name = "Dionysios Antypas", email = "dionysios.antypas@bzh.uni-heidelberg.de" }
 ]
@@ -23,23 +21,32 @@ dependencies = [
   "elapi>=2.3.3",
   "openpyxl>=3.0.0",
   "responses>=0.25.8",
-  "notebook>=7.4.7",
-  "pytest>=9.0.2",
 ]
 
 [project.optional-dependencies]
-dev = [
-  "pytest>=8.4.1",
-  "responses>=0.25.7",
-  "deptry>=0.24.0",
-  "pip-check-reqs>=2.5.5",
-  "pip-chill>=1.0.3"
+notebook = [
+  "notebook>=7.4.7",
 ]
 
+[dependency-groups]
+test = [
+  "pytest>=9.0.2",
+]
+lint = [
+  "ruff>=0.14.11",
+  "black>=25.12.0",
+]
+types = [
+  "pandas-stubs>=2.3.3.251219",
+]
+dev = [
+  "deptry>=0.24.0",
+  "pip-check-reqs>=2.5.5",
+  "pip-chill>=1.0.3",
+]
 
 [project.urls]
 Homepage = "https://github.com/dantypas3/elAPI_Plugins"
-
 
 [tool.setuptools]
 package-dir = { "" = "src" }
