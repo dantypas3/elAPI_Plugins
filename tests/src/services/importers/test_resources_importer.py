@@ -1,19 +1,21 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
-import pandas as pd
 import pytest
 
-from tests.conftest import FakeEndpoint, FakeResponse, write_csv
 from src.services.importers import resources_importer as res_module
+from tests.conftest import FakeEndpoint, FakeResponse, write_csv
 
 
 def test_create_new_with_files(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    def fake_post(**kwargs):
+    def fake_post(**kwargs: Any) -> FakeResponse:
         return FakeResponse(headers={"Location": "http://x/resources/99"})
 
-    monkeypatch.setattr(res_module, "get_fixed", lambda name: FakeEndpoint(post=fake_post))
+    monkeypatch.setattr(
+        res_module, "get_fixed", lambda name: FakeEndpoint(post=fake_post)
+    )
 
     files_dir = tmp_path / "files"
     files_dir.mkdir()
@@ -28,13 +30,13 @@ def test_create_new_with_files(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) 
 
     called = {"attach": 0, "single": 0, "extra": 0}
 
-    def fake_attach(*args, **kwargs):
+    def fake_attach(*args: Any, **kwargs: Any) -> None:
         called["attach"] += 1
 
-    def fake_single(*args, **kwargs):
+    def fake_single(*args: Any, **kwargs: Any) -> None:
         called["single"] += 1
 
-    def fake_extra(*args, **kwargs):
+    def fake_extra(*args: Any, **kwargs: Any) -> None:
         called["extra"] += 1
 
     monkeypatch.setattr(importer, "attach_files", fake_attach)
@@ -49,25 +51,28 @@ def test_create_new_with_files(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) 
     assert called["extra"] == 1
 
 
-def test_post_extra_fields_from_row(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    def fake_get(**kwargs):
+def test_post_extra_fields_from_row(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    def fake_get(**kwargs: Any) -> FakeResponse:
         return FakeResponse(
-            json_data={
-                "metadata": {
-                    "extra_fields": {
-                        "Extra Field": {"type": "text"}
-                    }
-                }
-            }
+            json_data={"metadata": {"extra_fields": {"Extra Field": {"type": "text"}}}}
         )
 
-    captured = {}
+    captured: dict[str, dict[str, Any]] = {}
 
-    def fake_patch(**kwargs):
-        captured["data"] = kwargs.get("data")
+    def fake_patch(**kwargs: Any) -> FakeResponse:
+        data = kwargs["data"]
+        if not isinstance(data, dict):
+            raise AssertionError("Expected dict payload for patch")
+        captured["data"] = data
         return FakeResponse()
 
-    monkeypatch.setattr(res_module, "get_fixed", lambda name: FakeEndpoint(get=fake_get, patch=fake_patch))
+    monkeypatch.setattr(
+        res_module,
+        "get_fixed",
+        lambda name: FakeEndpoint(get=fake_get, patch=fake_patch),
+    )
 
     csv_path = write_csv(
         tmp_path / "res.csv",

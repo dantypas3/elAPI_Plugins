@@ -1,17 +1,17 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
+from typing import Any
 
 import pandas as pd
 import pytest
 
-from tests.conftest import FakeEndpoint, FakeResponse
 from src.services.importers.base_importer import BaseImporter
+from tests.conftest import FakeEndpoint, FakeResponse
 
 
 class DummyImporter(BaseImporter):
-    def __init__(self, df: pd.DataFrame, files_base_dir: Optional[Path] = None) -> None:
+    def __init__(self, df: pd.DataFrame, files_base_dir: Path | None = None) -> None:
         self._df = df
         self._cols_canon = {c.lower().replace(" ", ""): c for c in df.columns}
         self._files_base_dir = files_base_dir
@@ -26,11 +26,11 @@ class DummyImporter(BaseImporter):
         return self._cols_canon
 
     @property
-    def endpoint(self):
+    def endpoint(self) -> FakeEndpoint:
         return self._endpoint
 
     @property
-    def files_base_dir(self) -> Optional[Path]:
+    def files_base_dir(self) -> Path | None:
         return self._files_base_dir
 
 
@@ -79,21 +79,22 @@ def test_update_extra_fields_from_row(monkeypatch: pytest.MonkeyPatch) -> None:
     df = pd.DataFrame({"Extra Field": ["value"]})
     imp = DummyImporter(df)
 
-    def fake_get(**kwargs):
+    def fake_get(**kwargs: Any) -> FakeResponse:
         return FakeResponse(
             json_data={
                 "metadata_decoded": {
-                    "extra_fields": [
-                        {"title": "Extra Field", "value": ""}
-                    ]
+                    "extra_fields": [{"title": "Extra Field", "value": ""}]
                 }
             }
         )
 
-    captured = {}
+    captured: dict[str, dict[str, Any]] = {}
 
-    def fake_patch(**kwargs):
-        captured["data"] = kwargs.get("data")
+    def fake_patch(**kwargs: Any) -> FakeResponse:
+        data = kwargs["data"]
+        if not isinstance(data, dict):
+            raise AssertionError("Expected dict payload for patch")
+        captured["data"] = data
         return FakeResponse()
 
     imp._endpoint = FakeEndpoint(get=fake_get, patch=fake_patch)
