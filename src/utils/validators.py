@@ -12,17 +12,14 @@ class IDValidator(Validator):
     """Generic validator for any single-id endpoint."""
 
     def __init__ (self, name: str, value: Union[str, int]):
-        """
-        name: one of “resource”, “category”, “experiment”…
-        value: the id to validate (string or int)
-        """
+        """name: endpoint type (“resource”, “category”, etc.); value: id to validate."""
         self.name = name
         self._value = str(value)
         self._endpoint = get_fixed(name)
 
     @property
     def value (self) -> str:
-        return self.value
+        return self._value
 
     @value.setter
     def value (self, v: Union[str, int]) -> None:

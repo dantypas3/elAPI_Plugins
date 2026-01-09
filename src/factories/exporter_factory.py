@@ -1,13 +1,13 @@
 from typing import Callable, Dict, Optional
 
-from ..services.exporters import ExperimentsExporter, ResourceExporter
+from ..services.exporters import ExperimentsExporter, ResourcesExporter
 from ..services.exporters.base_exporter import BaseExporter
 
 
 class ExporterFactory:
     """ExporterFactory is responsible for exporting structured data into eLabFTW-compatible formats."""
     _exporters: Dict[str, Callable[..., BaseExporter]] = {
-        "resources"  : ResourceExporter,
+        "resources"  : ResourcesExporter,
         "experiments": ExperimentsExporter,
         }
 

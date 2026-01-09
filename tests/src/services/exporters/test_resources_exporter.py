@@ -20,7 +20,7 @@ def test_xlsx_export(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
 
     monkeypatch.setattr(res_module.IDValidator, "validate", fake_validate)
 
-    exporter = res_module.ResourceExporter(category_id=1)
+    exporter = res_module.ResourcesExporter(category_id=1)
 
     def fake_to_excel(self, path, index=False):
         Path(path).write_text("x", encoding="utf-8")

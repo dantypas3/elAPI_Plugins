@@ -10,9 +10,7 @@ from requests.exceptions import ReadTimeout, ConnectTimeout
 
 
 def strip_html (html_str: str) -> str:
-    """
-    Convert HTML into plain text:
-    """
+    """Return plain text from HTML."""
     soup = BeautifulSoup(html_str or "", "html.parser")
 
     paragraphs = soup.find_all("p")
@@ -44,12 +42,12 @@ def load_config (config_path: Union[str, Path]) -> Dict:
 
     except FileNotFoundError:
         raise FileNotFoundError(
-            f"Config file not found. Tried: {config_file}. " f"Set "
+            f"Config file not found. Tried: {config_path}. " f"Set "
             f"RES_IMPORTER_CONFIG to override, "
             f"or ensure config/res_importer_config.json exists at repo root.")
 
     except json.JSONDecodeError as e:
-        raise ValueError(f"Error decoding JSON from {config_file}: {e}")
+        raise ValueError(f"Error decoding JSON from {config_path}: {e}")
 
 
 T = TypeVar("T")
@@ -65,10 +63,7 @@ def paged_fetch(
     backoff_s: Callable[[int], float] = lambda attempt: 1.5 * attempt,
     on_progress: Callable[[int, int, int], None] | None = None,
 ) -> Iterator[T]:
-    """
-    Generic paging loop with retry logic + adaptive limit + skip-on-timeout.
-    get_page(limit, offset) -> sequence of items
-    """
+    """Iterate pages with retries, adaptive limits, and optional progress callback."""
     offset = start_offset
 
     while True:

@@ -1,13 +1,4 @@
-"""
-This module defines: class:`BaseImporter`, an abstract base class for
-importing data into ElabFTW endpoints.  It provides shared helpers for
-normalizing identifiers, resolving category columns, extracting titles,
-parsing tag lists, and updating ``metadata.extra_fields`` on existing
-resources or experiments.
-
-Concrete importers should subclass: class:`BaseImporter` and implement
-the :attr:`df`, :attr:`cols_lower` and :attr:`endpoint` properties.
-"""
+"""Base importer utilities for ElabFTW resources/experiments."""
 
 from __future__ import annotations
 
@@ -42,16 +33,7 @@ logger = logging.getLogger(__name__)
 
 
 class BaseImporter(ABC):
-  """Abstract base class for resource and experiment importers.
-
-  Subclasses must expose three properties:
-  This base class implements generic helpers such as normalising ids,
-  extracting category ids, titles, and tags, and updating extra fields in
-  metadata.  Concrete importers can build upon these to provide more
-  specialised behaviour.
-  """
-
-  # ------------------- Canonicalization & column helpers -------------------
+  """Shared helpers for importer subclasses (ids, columns, tags, files, extras)."""
 
   def _canonicalize_column_indexes(self, columns: pd.Index) -> Dict[str, str]:
 
@@ -108,8 +90,6 @@ class BaseImporter(ABC):
     logger.warning("Unrecognized date format: %r", date_str)
     return None
 
-    # --- Required API ---
-
   @property
   @abstractmethod
   def basic_df(self) -> pd.DataFrame:
@@ -148,8 +128,6 @@ class BaseImporter(ABC):
         return original
     return None
 
-    # ------------------- files helpers -------------------
-
   def _iter_files_in_dir(self, folder: Union[str, Path], recursive: bool = True) -> List[Path]:
 
     path = Path(str(folder)).expanduser()
@@ -170,10 +148,7 @@ class BaseImporter(ABC):
     return files
 
   def _resolve_folder(self, raw_value: Union[str, Path]) -> Optional[Path]:
-    """
-    Convert a CSV cell into a Path if it looks like a valid file/folder path.
-    Returns None if the value is empty, invalid, or clearly not a path.
-    """
+    """Convert a CSV cell to Path when it plausibly represents a file/folder."""
     if raw_value is None or (
       isinstance(raw_value, float) and pd.isna(raw_value)):
       return None
@@ -296,7 +271,6 @@ class BaseImporter(ABC):
       raise RuntimeError(
         "One or more uploads failed:\n- " + "\n- ".join(errors))
 
-  # --- Category handling ---
   def validate_category_id(self, cid: str) -> None:
     """Validate that a category ID is numeric."""
 
@@ -326,15 +300,7 @@ class BaseImporter(ABC):
     return s
 
   def get_category_id(self, row: pd.Series) -> Optional[str]:
-    """Extract and validate the category id from a row.
-
-    If the category column is missing or the value is empty, ``None`` is
-    returned.  Otherwise the id is normalised and validated as numeric.
-
-    :param row: A row from the CSV as a Series.
-    :returns: The category id or ``None`` if unavailable.
-    :raises ValueError: If the id is non‑numeric.
-    """
+    """Return normalized numeric category id from row or None; raises on non-numeric."""
     if row is None or not isinstance(row, pd.Series):
       return None
     col = self.resolve_category_col()
@@ -346,21 +312,14 @@ class BaseImporter(ABC):
     self.validate_category_id(cid)
     return cid
 
-  # --- HTTP helpers ---
   def get_elab_id(self, response: Response) -> str:
-    """Extract the numeric identifier from a ``Location`` header.
-
-    :param response: The HTTP response from a POST request.
-    :returns: A numeric identifier as a string.
-    :raises RuntimeError: If the id cannot be parsed.
-    """
+    """Extract numeric id from a Location header; raise if missing/invalid."""
     location = str(response.headers.get("Location"))
     exp_id = location.rstrip("/").split("/")[-1]
     if not exp_id.isdigit():
       raise RuntimeError(f"Could not parse experiment ID: {exp_id!r}")
     return exp_id
 
-  # --- Column extraction ---
   def _get_title(self, row: pd.Series) -> Optional[str]:
     """Return the title value from a row."""
 
@@ -385,15 +344,7 @@ class BaseImporter(ABC):
     return str(title_val).strip()
 
   def get_tags(self, row: pd.Series) -> List[str]:
-    """Parse the tags column from a row into a list.
-
-    Tags may be stored as a list/tuple/set, a pipe/semicolon/comma separated
-    string, or any scalar value.  Empty or missing tags return an empty
-    list.
-
-    :param row: A row from the CSV.
-    :returns: A list of tags.
-    """
+    """Parse tags column into list; supports sequences or delimited strings."""
     if row is None:
       return []
     tags_col = self.cols_canon.get("tags")
@@ -418,14 +369,8 @@ class BaseImporter(ABC):
       return []
     return [s]
 
-  # --- Existing record helpers ---
   def get_existing_json(self, elab_id: str) -> Dict[str, Any]:
-    """Retrieve the existing JSON representation for an id.
-
-    :param elab_id: The identifier of the resource or experiment.
-    :returns: A dictionary representing the JSON record; empty if an
-      error occurs or no JSON is returned.
-    """
+    """Fetch existing record JSON for id; return empty dict on failure."""
     try:
       logger.debug("Fetching existing JSON for id %s", elab_id)
       response = self.endpoint.get(endpoint_id=elab_id)
@@ -439,11 +384,7 @@ class BaseImporter(ABC):
 
   def fetch_extra_fields_mapping(self, elab_json: Dict[str, Any]) -> Dict[
     str, Dict[str, Any]]:
-    """Return a mapping from canonicalised extra field titles to their definitions.
-
-    :param elab_json: The existing JSON record containing ``metadata_decoded``.
-    :returns: A mapping keyed by canonical titles.
-    """
+    """Map canonicalized extra field titles to their definitions."""
     metadata_decoded = elab_json.get("metadata_decoded", {})
     extra_fields = metadata_decoded.get("extra_fields", [])
     mapping: Dict[str, Dict[str, Any]] = {}
@@ -461,18 +402,7 @@ class BaseImporter(ABC):
     self, elab_id: str, row: pd.Series,
     known_columns: Iterable[str]
   ) -> None:
-    """Patch extra fields on the existing record using values from the CSV row.
-
-    Any CSV column whose canonicalised name matches an existing extra field
-    title (and is not listed in ``known_columns``) will be used to update
-    that field's ``value``.  Missing values are converted to the empty
-    string.
-
-    :param elab_id: The identifier of the resource/experiment to update.
-    :param row: A CSV row as a Series.
-    :param known_columns: A collection of canonicalised names to skip (e.g.
-      ``"title"``, ``"tags"``).
-    """
+    """Patch existing extra fields with CSV values, skipping known columns."""
     existing = self.get_existing_json(elab_id)
     if not existing:
       return

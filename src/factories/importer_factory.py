@@ -8,7 +8,6 @@ from src.services.importers.resources_importer import ResourcesImporter
 class ImporterFactory:
     _importers: Dict[str, Type[BaseImporter]] = {
         "resources": ResourcesImporter,
-        # "experiments": ExperimentsImporter
         }
 
     @classmethod
