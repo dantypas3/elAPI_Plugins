@@ -17,7 +17,7 @@ def test_exporter_factory_returns_resources() -> None:
 
 def test_exporter_factory_unknown_raises() -> None:
     with pytest.raises(ValueError):
-        ExporterFactory.get_exporter("missing")  # type: ignore[arg-type]
+        ExporterFactory.get_exporter("missing")
 
 
 def test_importer_factory_returns_resources(tmp_path: Path) -> None:
@@ -29,4 +29,4 @@ def test_importer_factory_returns_resources(tmp_path: Path) -> None:
 
 def test_importer_factory_unknown_raises() -> None:
     with pytest.raises(ValueError):
-        ImporterFactory.get_importer("unknown")  # type: ignore[arg-type]
+        ImporterFactory.get_importer("unknown")

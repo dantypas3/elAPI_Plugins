@@ -1,13 +1,23 @@
 from __future__ import annotations
 
 import time
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Any, Iterator, NamedTuple
+from typing import NamedTuple
 
 import pytest
-from requests.exceptions import ConnectTimeout, ReadTimeout
+from requests.exceptions import (  # type: ignore[import-untyped]
+    ConnectTimeout,
+    ReadTimeout,
+)
 
-from src.utils.common import canonicalize, ensure_series, load_config, paged_fetch, strip_html
+from src.utils.common import (
+    canonicalize,
+    ensure_series,
+    load_config,
+    paged_fetch,
+    strip_html,
+)
 
 
 def test_strip_html_extracts_paragraphs() -> None:
@@ -72,6 +82,7 @@ def test_ensure_series_accepts_namedtuple() -> None:
 
     row = Row(1, "x")
     series = ensure_series(row)
+    assert series is not None
     assert series["a"] == 1
     assert series["b"] == "x"
 

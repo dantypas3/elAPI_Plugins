@@ -17,7 +17,7 @@ def test_detect_delimiter_prefers_semicolon(tmp_path: Path) -> None:
 def test_csv_to_df_handles_bom_and_newlines(tmp_path: Path) -> None:
     # Include BOM and Windows newlines to exercise normalization
     csv_path = tmp_path / "bom.csv"
-    csv_path.write_bytes("\ufeffa,b\r\n1,2\r\n".encode("utf-8"))
+    csv_path.write_bytes("\ufeffa,b\r\n1,2\r\n".encode())
 
     df = CsvTools.csv_to_df(csv_path)
 

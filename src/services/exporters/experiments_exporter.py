@@ -34,7 +34,11 @@ class ExperimentsExporter(BaseExporter):
             resp = self._endpoint.get(query={"limit": limit, "offset": offset})
             resp.raise_for_status()
             data = resp.json()
-            if isinstance(data, dict) and "data" in data and isinstance(data["data"], list):
+            if (
+                isinstance(data, dict)
+                and "data" in data
+                and isinstance(data["data"], list)
+            ):
                 rows = data["data"]
             elif isinstance(data, list):
                 rows = data
@@ -123,7 +127,7 @@ class ExperimentsExporter(BaseExporter):
 
         return df_final
 
-    def xlsx_export(self, export_file: str | None = None) -> Path | None:
+    def xlsx_export(self, export_file: str | None = None) -> Path:
         export_data = self.process_data()
 
         if export_file:

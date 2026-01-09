@@ -1,10 +1,9 @@
-#Files
+# Files
 *.csv
 *.dna
 *.xlsx
 *.py[cod]
 *.so
-.env
 *.log
 *.sqlite3
 *.parquet
@@ -12,19 +11,37 @@
 *.spec
 *.bac
 *.egg-info
+*.env
+.env.*
 *.lock
+!uv.lock
 
-mypy.ini
-ruff.toml
+# Coverage / tooling caches
+.coverage
+coverage.xml
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
 
-#Directories
+# Editors / OS
 .idea/
 .vscode/
+.DS_Store
+
+# Build / dist
 .build/
 .flake8
 build/
 dist/
-__pycache__/
+
+# Virtual environments
 venv/
+.venv/
+
+# Project artifacts
+logs/
+uploads/
 docs/
 test_data/
+__pycache__/
