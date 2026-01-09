@@ -1,8 +1,18 @@
 from __future__ import annotations
 
 import csv
+import sys
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Any
+
+# Ensure project root and src/ are first on sys.path so imports resolve correctly
+ROOT = Path(__file__).resolve().parents[1]
+SRC_DIR = ROOT / "src"
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
 
 
 class FakeResponse:
@@ -10,7 +20,7 @@ class FakeResponse:
         self,
         status_code: int = 200,
         json_data: Any = None,
-        headers: Optional[dict] = None,
+        headers: dict | None = None,
         text: str = "",
     ) -> None:
         self.status_code = status_code
@@ -26,37 +36,49 @@ class FakeResponse:
             raise RuntimeError(f"HTTP {self.status_code}: {self.text}")
 
 
+ResponseCallable = Callable[..., "FakeResponse"]
+
+
 class FakeEndpoint:
     def __init__(
         self,
-        get: Optional[Callable[..., FakeResponse]] = None,
-        post: Optional[Callable[..., FakeResponse]] = None,
-        patch: Optional[Callable[..., FakeResponse]] = None,
+        get: FakeResponse | ResponseCallable | None = None,
+        post: FakeResponse | ResponseCallable | None = None,
+        patch: FakeResponse | ResponseCallable | None = None,
     ) -> None:
         self._get = get
         self._post = post
         self._patch = patch
 
-    def get(self, *args, **kwargs) -> FakeResponse:
-        if callable(self._get):
-            return self._get(*args, **kwargs)
-        if self._get is None:
+    def get(self, *args: Any, **kwargs: Any) -> FakeResponse:
+        stub = self._get
+        if callable(stub):
+            response = stub(*args, **kwargs)
+        elif isinstance(stub, FakeResponse):
+            response = stub
+        else:
             raise AssertionError("FakeEndpoint.get was called without a stub")
-        return self._get
+        return response
 
-    def post(self, *args, **kwargs) -> FakeResponse:
-        if callable(self._post):
-            return self._post(*args, **kwargs)
-        if self._post is None:
+    def post(self, *args: Any, **kwargs: Any) -> FakeResponse:
+        stub = self._post
+        if callable(stub):
+            response = stub(*args, **kwargs)
+        elif isinstance(stub, FakeResponse):
+            response = stub
+        else:
             raise AssertionError("FakeEndpoint.post was called without a stub")
-        return self._post
+        return response
 
-    def patch(self, *args, **kwargs) -> FakeResponse:
-        if callable(self._patch):
-            return self._patch(*args, **kwargs)
-        if self._patch is None:
+    def patch(self, *args: Any, **kwargs: Any) -> FakeResponse:
+        stub = self._patch
+        if callable(stub):
+            response = stub(*args, **kwargs)
+        elif isinstance(stub, FakeResponse):
+            response = stub
+        else:
             raise AssertionError("FakeEndpoint.patch was called without a stub")
-        return self._patch
+        return response
 
 
 def write_csv(path: Path, headers: list[str], rows: list[list[Any]]) -> Path:

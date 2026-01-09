@@ -1,5 +1,6 @@
 #Files
 *.csv
+*.dna
 *.xlsx
 *.py[cod]
 *.so
@@ -26,3 +27,4 @@ dist/
 __pycache__/
 venv/
 docs/
+test_data/
