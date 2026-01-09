@@ -6,10 +6,9 @@ from typing import Any
 import pandas as pd
 import pytest
 
-from tests.conftest import FakeEndpoint, FakeResponse
 from src.services.exporters.experiments_exporter import ExperimentsExporter
 from src.services.exporters.resources_exporter import ResourcesExporter
-from src.utils import validators
+from tests.conftest import FakeEndpoint, FakeResponse
 
 
 class _SimpleEndpoint(FakeEndpoint):
@@ -25,7 +24,7 @@ class _SimpleEndpoint(FakeEndpoint):
 def test_resources_exporter_process_data_extracts_extra_and_strips_html(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    pages = [
+    pages: list[dict[str, Any]] = [
         {
             "data": [
                 {
@@ -62,8 +61,10 @@ def test_resources_exporter_process_data_extracts_extra_and_strips_html(
     assert df.at[0, "body"] == "Hello"
 
 
-def test_resources_exporter_fetch_data_uses_validator(monkeypatch: pytest.MonkeyPatch) -> None:
-    pages = [{"data": [{"id": 1}]}, {"data": []}]
+def test_resources_exporter_fetch_data_uses_validator(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    pages: list[dict[str, Any]] = [{"data": [{"id": 1}]}, {"data": []}]
     endpoint = _SimpleEndpoint(pages)
 
     validated: list[bool] = []
@@ -93,9 +94,9 @@ def test_resources_exporter_fetch_data_uses_validator(monkeypatch: pytest.Monkey
 def test_resources_exporter_xlsx_export_writes_file(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    exporter = ResourcesExporter.__new__(ResourcesExporter)  # type: ignore[call-arg]
-    exporter._category_id = 1  # type: ignore[attr-defined]
-    exporter._endpoint = None  # type: ignore[attr-defined]
+    exporter = ResourcesExporter.__new__(ResourcesExporter)
+    exporter._category_id = 1
+    exporter._endpoint = None
 
     dummy_df = pd.DataFrame([{"body": "hi"}])
     monkeypatch.setattr(ResourcesExporter, "process_data", lambda self: dummy_df)
@@ -107,8 +108,8 @@ def test_resources_exporter_xlsx_export_writes_file(
 
 
 def test_experiments_exporter_process_data(monkeypatch: pytest.MonkeyPatch) -> None:
-    exporter = ExperimentsExporter.__new__(ExperimentsExporter)  # type: ignore[call-arg]
-    exporter._endpoint = None  # type: ignore[attr-defined]
+    exporter = ExperimentsExporter.__new__(ExperimentsExporter)
+    exporter._endpoint = None
 
     df_in = pd.DataFrame(
         [
@@ -125,9 +126,11 @@ def test_experiments_exporter_process_data(monkeypatch: pytest.MonkeyPatch) -> N
     assert df_out.at[0, "body"] == "Text"
 
 
-def test_experiments_exporter_xlsx_export(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    exporter = ExperimentsExporter.__new__(ExperimentsExporter)  # type: ignore[call-arg]
-    exporter._endpoint = None  # type: ignore[attr-defined]
+def test_experiments_exporter_xlsx_export(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    exporter = ExperimentsExporter.__new__(ExperimentsExporter)
+    exporter._endpoint = None
     dummy_df = pd.DataFrame([{"col": 1}])
     monkeypatch.setattr(ExperimentsExporter, "process_data", lambda self: dummy_df)
     monkeypatch.setattr(Path, "cwd", lambda: tmp_path)
@@ -137,7 +140,9 @@ def test_experiments_exporter_xlsx_export(monkeypatch: pytest.MonkeyPatch, tmp_p
     assert out.suffix == ".xlsx"
 
 
-def test_experiments_exporter_fetch_data_uses_paged_fetch(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_experiments_exporter_fetch_data_uses_paged_fetch(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     calls: list[int] = []
 
     class DummyEndpoint(FakeEndpoint):

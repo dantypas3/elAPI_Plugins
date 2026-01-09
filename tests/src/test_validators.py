@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import pytest
+from elapi.validators import ValidationError
 
-from tests.conftest import FakeEndpoint, FakeResponse
 from src.utils import validators
 from src.utils.validators import IDValidator
-from elapi.validators import ValidationError
+from tests.conftest import FakeEndpoint, FakeResponse
 
 
 def test_id_validator_validate_success(monkeypatch: pytest.MonkeyPatch) -> None:

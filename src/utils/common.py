@@ -7,7 +7,10 @@ from typing import Any, TypeVar
 
 import pandas as pd
 from bs4 import BeautifulSoup
-from requests.exceptions import ConnectTimeout, ReadTimeout
+from requests.exceptions import (  # type: ignore[import-untyped]
+    ConnectTimeout,
+    ReadTimeout,
+)
 
 
 def strip_html(html_str: str) -> str:
@@ -26,13 +29,16 @@ def canonicalize(name: str) -> str:
     return name.lower().replace(" ", "").replace("-", "_")
 
 
-def ensure_series(row: pd.Series) -> Any:
+def ensure_series(row: Any) -> pd.Series | None:
+    """Return a Series built from the input, or ``None`` when conversion fails."""
     if isinstance(row, pd.Series):
         return row
-    try:
-        return pd.Series(row._asdict())
-    except Exception:
-        return None
+    if hasattr(row, "_asdict"):
+        try:
+            return pd.Series(row._asdict())
+        except Exception:
+            return None
+    return None
 
 
 def load_config(config_path: str | Path) -> dict:

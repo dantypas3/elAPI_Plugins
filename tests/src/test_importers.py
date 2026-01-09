@@ -7,9 +7,9 @@ from typing import Any
 import pandas as pd
 import pytest
 
-from tests.conftest import FakeEndpoint, FakeResponse
 from src.services.importers.base_importer import BaseImporter
 from src.services.importers.resources_importer import ResourcesImporter
+from tests.conftest import FakeEndpoint, FakeResponse
 
 
 class DummyEndpoint(FakeEndpoint):
@@ -74,9 +74,6 @@ def test_base_importer_canonicalize_and_find_col() -> None:
 def test_base_importer_normalize_date_and_title(monkeypatch: pytest.MonkeyPatch) -> None:
     df = pd.DataFrame([{"Date": "01/02/2024", "Title": "  Hello  "}])
     importer = DummyImporter(df)
-    monkeypatch.setattr(
-        "src.services.importers.base_importer.ensure_series", lambda row: True
-    )
     row = df.iloc[0]
     normalized = importer._normalize_date(row)
     assert normalized == "2024-02-01"
@@ -98,16 +95,22 @@ def test_base_importer_resolve_folder_with_base_dir() -> None:
     assert resolved == Path("/base/folder/file.txt")
 
 
-def test_resources_importer_create_new(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_resources_importer_create_new(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     csv_path = tmp_path / "res.csv"
     csv_path.write_text("title,tags,category\nHello,tag1,1\n", encoding="utf-8")
 
     importer = ResourcesImporter(csv_path=csv_path)
     dummy_endpoint = DummyEndpoint()
-    importer._endpoint = dummy_endpoint  # type: ignore[attr-defined]
+    importer._endpoint = dummy_endpoint
 
     # Avoid network/file uploads during test
-    monkeypatch.setattr(importer, "post_extra_fields_from_row", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        importer,
+        "post_extra_fields_from_row",
+        lambda *args, **kwargs: None,
+    )
 
     new_id = importer.create_new(row=importer.basic_df.iloc[0], template=None)
 
@@ -120,26 +123,34 @@ def test_resources_importer_attach_single_file_missing(tmp_path: Path) -> None:
     csv_path = tmp_path / "res.csv"
     csv_path.write_text("title\nA\n", encoding="utf-8")
     importer = ResourcesImporter(csv_path=csv_path)
-    importer._endpoint = DummyEndpoint()  # type: ignore[attr-defined]
+    importer._endpoint = DummyEndpoint()
     with pytest.raises(FileNotFoundError):
         importer.attach_single_file(resource_id=1, file=tmp_path / "missing.txt")
 
 
-def test_resources_importer_post_extra_fields_patches(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_resources_importer_post_extra_fields_patches(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     df = pd.DataFrame([{"Color": "red"}])
-    importer = ResourcesImporter.__new__(ResourcesImporter)  # type: ignore[call-arg]
-    importer._resources_df = df  # type: ignore[attr-defined]
-    importer._cols_canon = {"color": "Color"}  # type: ignore[attr-defined]
-    importer._endpoint = DummyEndpoint()  # type: ignore[attr-defined]
-    importer._template_id = None  # type: ignore[attr-defined]
-    importer._files_base_dir = None  # type: ignore[attr-defined]
-    importer._category_col = None  # type: ignore[attr-defined]
-    importer._new_resources_counter = 0  # type: ignore[attr-defined]
-    importer._patched_resources_counter = 0  # type: ignore[attr-defined]
+    importer = object.__new__(ResourcesImporter)
+    importer._resources_df = df
+    importer._cols_canon = {"color": "Color"}
+    importer._endpoint = DummyEndpoint()
+    importer._template_id = None
+    importer._files_base_dir = None
+    importer._category_col = None
+    importer._new_resources_counter = 0
+    importer._patched_resources_counter = 0
 
     def fake_existing(elab_id: str) -> dict[str, Any]:
         _ = elab_id
-        return {"metadata": {"extra_fields": {"Color": {"type": "select", "options": ["Red", "Blue"]}}}}
+        return {
+            "metadata": {
+                "extra_fields": {
+                    "Color": {"type": "select", "options": ["Red", "Blue"]}
+                }
+            }
+        }
 
     monkeypatch.setattr(importer, "get_existing_json", fake_existing)
 
@@ -149,40 +160,42 @@ def test_resources_importer_post_extra_fields_patches(monkeypatch: pytest.Monkey
         known_columns={"title"},
     )
 
-    assert importer._endpoint.last_patch is not None  # type: ignore[attr-defined]
-    payload = importer._endpoint.last_patch  # type: ignore[attr-defined]
+    assert importer._endpoint.last_patch is not None
+    payload = importer._endpoint.last_patch
     assert isinstance(payload, dict)
     metadata = json.loads(payload["metadata"])
     assert metadata["extra_fields"]["Color"]["value"] == "Red"
 
 
 def test_resources_importer_patch_existing(monkeypatch: pytest.MonkeyPatch) -> None:
-    importer = ResourcesImporter.__new__(ResourcesImporter)  # type: ignore[call-arg]
-    importer._resources_df = pd.DataFrame([{"title": "T"}])  # type: ignore[attr-defined]
-    importer._cols_canon = {"title": "title"}  # type: ignore[attr-defined]
-    importer._endpoint = DummyEndpoint()  # type: ignore[attr-defined]
-    importer._template_id = None  # type: ignore[attr-defined]
-    importer._files_base_dir = None  # type: ignore[attr-defined]
-    importer._category_col = None  # type: ignore[attr-defined]
-    importer._new_resources_counter = 0  # type: ignore[attr-defined]
-    importer._patched_resources_counter = 0  # type: ignore[attr-defined]
-
-    monkeypatch.setattr(
-        "src.services.importers.base_importer.ensure_series", lambda row: True
-    )
+    importer = object.__new__(ResourcesImporter)
+    importer._resources_df = pd.DataFrame([{"title": "T"}])
+    importer._cols_canon = {"title": "title"}
+    importer._endpoint = DummyEndpoint()
+    importer._template_id = None
+    importer._files_base_dir = None
+    importer._category_col = None
+    importer._new_resources_counter = 0
+    importer._patched_resources_counter = 0
 
     def fake_existing(_elab_id: str) -> dict[str, Any]:
         return {"metadata": json.dumps({"extra_fields": {"Field": {"value": "v"}}})}
 
     monkeypatch.setattr(importer, "get_existing_json", fake_existing)
 
-    status = importer.patch_existing(resource_id="1", category="2", row=importer.basic_df.iloc[0])
+    status = importer.patch_existing(
+        resource_id="1", category="2", row=importer.basic_df.iloc[0]
+    )
     assert status == 200
-    assert importer._endpoint.last_patch is not None  # type: ignore[attr-defined]
+    assert importer._endpoint.last_patch is not None
 
 
 def test_resources_importer_coerce_for_field_select_multi() -> None:
-    definition = {"type": "select", "options": ["Red", "Blue"], "allow_multi_values": True}
+    definition = {
+        "type": "select",
+        "options": ["Red", "Blue"],
+        "allow_multi_values": True,
+    }
     coerced = ResourcesImporter._coerce_for_field(definition, "red,blue,blue")
     assert coerced == ["Red", "Blue"]
 

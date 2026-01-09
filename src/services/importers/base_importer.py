@@ -15,7 +15,6 @@ from typing import Any
 
 import pandas as pd
 from elapi.api import FixedEndpoint
-from responses import Response
 
 from src.utils.common import canonicalize, ensure_series
 from src.utils.paths import RES_IMPORTER_CONFIG
@@ -65,16 +64,17 @@ class BaseImporter(ABC):
             (col for col in self.cols_canon.values() if col in CONFIG["path_col"]), None
         )
 
-    def _normalize_date(self, row: pd.Series) -> str | None:
-        if not ensure_series(row):
+    def _normalize_date(self, row: pd.Series | Any) -> str | None:
+        row_series = ensure_series(row)
+        if row_series is None:
             return None
 
         date_col = self.cols_canon.get("date")
 
-        if date_col is None or date_col not in row.index:
+        if date_col is None or date_col not in row_series.index:
             return None
 
-        date_val = row[date_col]
+        date_val = row_series[date_col]
 
         if pd.isna(date_val):
             return None
@@ -321,7 +321,7 @@ class BaseImporter(ABC):
         self.validate_category_id(cid)
         return cid
 
-    def get_elab_id(self, response: Response) -> str:
+    def get_elab_id(self, response: Any) -> str:
         """Extract numeric id from a Location header; raise if missing/invalid."""
         headers: Mapping[str, str] | None = getattr(response, "headers", None)
         location = str(headers.get("Location", "")) if headers is not None else ""
