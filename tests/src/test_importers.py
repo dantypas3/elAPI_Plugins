@@ -167,6 +167,34 @@ def test_resources_importer_post_extra_fields_patches(
     assert metadata["extra_fields"]["Color"]["value"] == "Red"
 
 
+def test_resources_importer_creates_missing_extra_field(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    df = pd.DataFrame([{"New Field": "abc"}])
+    importer = object.__new__(ResourcesImporter)
+    importer._resources_df = df
+    importer._cols_canon = {"newfield": "New Field"}
+    importer._endpoint = DummyEndpoint()
+    importer._template_id = None
+    importer._files_base_dir = None
+    importer._category_col = None
+    importer._new_resources_counter = 0
+    importer._patched_resources_counter = 0
+
+    monkeypatch.setattr(importer, "get_existing_json", lambda _elab_id: {})
+
+    importer.post_extra_fields_from_row(
+        resource_id="1",
+        row=df.iloc[0],
+        known_columns={"title"},
+    )
+
+    assert importer._endpoint.last_patch is not None
+    payload = importer._endpoint.last_patch
+    metadata = json.loads(payload["metadata"])
+    assert metadata["extra_fields"]["New Field"]["value"] == "abc"
+
+
 def test_resources_importer_patch_existing(monkeypatch: pytest.MonkeyPatch) -> None:
     importer = object.__new__(ResourcesImporter)
     importer._resources_df = pd.DataFrame([{"title": "T"}])
