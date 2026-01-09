@@ -12,6 +12,7 @@ from werkzeug.utils import secure_filename
 from werkzeug.wrappers.response import Response as WerkzeugResponse
 
 from src.factories import ExporterFactory, ImporterFactory
+from src.updater.updater import check_for_update
 from src.utils import endpoints
 from src.utils.common import paged_fetch
 from src.utils.logging_config import setup_logging
@@ -65,6 +66,12 @@ server = None
 
 @app.route("/", methods=["GET", "POST"])
 def index() -> str | WerkzeugResponse:
+    try:
+        update_info = check_for_update(timeout=5)
+    except Exception as exc:
+        logger.info("Update check skipped: %s", exc)
+        update_info = None
+
     endpoint = endpoints.get_fixed("categories")
 
     def get_page(limit: int, offset: int) -> list[dict]:
@@ -143,7 +150,7 @@ def index() -> str | WerkzeugResponse:
 
             return redirect(url_for("index"))
 
-    return render_template("index.html", categories=categories)
+    return render_template("index.html", categories=categories, update_info=update_info)
 
 
 @app.route("/shutdown", methods=["POST"])
