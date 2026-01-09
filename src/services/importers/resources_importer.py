@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import logging
 import mimetypes
-import os
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
@@ -76,26 +75,6 @@ class ResourcesImporter(BaseImporter):
     def files_base_dir(self) -> Path | None:
         return self._files_base_dir
 
-    def _resolve_folder(self, value: str | Path) -> Path | None:
-        if value is None or (isinstance(value, float) and pd.isna(value)):
-            return None
-        s = str(value).replace("\u00a0", " ").strip()
-        if not s:
-            return None
-        looks_like_path = (
-            any(ch in s for ch in (os.sep, "/", "\\"))
-            or os.path.isabs(s)
-            or "." in os.path.basename(s)
-            or self._files_base_dir is not None
-        )
-        if not looks_like_path:
-            logger.info("Skipping files upload: value does not look like a path: %r", s)
-            return None
-        p = Path(s).expanduser()
-        if not p.is_absolute() and self._files_base_dir:
-            p = (self._files_base_dir / p).resolve()
-        return p
-
     def attach_single_file(self, resource_id: int | str, file: str | Path) -> None:
         """Upload a single file; prefer 'files[]', fallback to 'file'."""
         rid = str(resource_id)
@@ -137,11 +116,12 @@ class ResourcesImporter(BaseImporter):
 
     def _collect_csv_extra_fields(
         self, row: pd.Series, known_columns: Iterable[str] | None = None
-    ) -> dict[str, Any]:
+    ) -> dict[str, tuple[str, Any]]:
         known_canon = {canonicalize_field(x) for x in self._KNOWN_POST_FIELDS}
         if known_columns:
             known_canon |= {canonicalize_field(x) for x in known_columns}
-        extras: dict[str, Any] = {}
+        extras: dict[str, tuple[str, Any]] = {}
+        # Collects non‑null, non‑standard fields from row
         for col, val in row.items():
             if not isinstance(col, str):
                 continue
@@ -153,7 +133,7 @@ class ResourcesImporter(BaseImporter):
             sval = str(val).replace("\u00a0", " ").strip()
             if not sval:
                 continue
-            extras[ckey] = sval
+            extras[ckey] = (col, sval)
         return extras
 
     @staticmethod
@@ -175,9 +155,11 @@ class ResourcesImporter(BaseImporter):
 
         if ftype == "select":
             vals = ResourcesImporter._split_multi(raw)
+            # Coerces single or multiple select values
             if allow_multi:
                 lower_map = {o.lower(): o for o in options_set}
                 picked: list[str] = []
+                # Accumulates case‑sensitive and insensitive matches from options
                 for v in vals:
                     if v in options_set and v not in picked:
                         picked.append(v)
@@ -231,27 +213,33 @@ class ResourcesImporter(BaseImporter):
         csv_extras = self._collect_csv_extra_fields(row, known_columns=known_columns)
 
         changed: dict[str, Any] = {}
-        for ckey, raw_val in csv_extras.items():
-            if ckey not in defs_by_canon:
-                continue
-            real_key = defs_by_canon[ckey]
-            defn = elab_extra_fields.get(real_key) or {}
-            coerced = self._coerce_for_field(defn, raw_val)
+        for ckey, (orig_col, raw_val) in csv_extras.items():
+            # Updates resource with coerced value when definition exists
+            if ckey in defs_by_canon:
+                real_key = defs_by_canon[ckey]
+                defn = elab_extra_fields.get(real_key) or {}
+                coerced = self._coerce_for_field(defn, raw_val)
 
-            if coerced is None:
-                logger.info(
-                    "Skipping field %r: value %r not valid for options.",
-                    real_key,
-                    raw_val,
-                )
-                continue
-            slot = elab_extra_fields.get(real_key)
+                if coerced is None:
+                    logger.info(
+                        "Skipping field %r: value %r not valid for options.",
+                        real_key,
+                        raw_val,
+                    )
+                    continue
+                slot = elab_extra_fields.get(real_key)
 
-            if not isinstance(slot, dict):
-                elab_extra_fields[real_key] = {"value": coerced}
-            else:
-                slot["value"] = coerced
-            changed[real_key] = coerced
+                if not isinstance(slot, dict):
+                    elab_extra_fields[real_key] = {"value": coerced}
+                else:
+                    slot["value"] = coerced
+                changed[real_key] = coerced
+                continue
+
+            # Create a new extra field when no matching definition exists on the resource
+            new_key = orig_col
+            elab_extra_fields[new_key] = {"value": raw_val}
+            changed[new_key] = raw_val
 
         if not changed:
             logger.info("No matching extra fields to upload for resource %s.", rid)
@@ -328,6 +316,7 @@ class ResourcesImporter(BaseImporter):
         if path_col and path_col in row:
             folder_path = self._resolve_folder(row[path_col])
 
+            # Attaches files from path if directory or file
             if folder_path and folder_path.exists() and folder_path.is_dir():
                 self.attach_files(resource_id, folder_path)
             elif folder_path and folder_path.exists() and folder_path.is_file():
