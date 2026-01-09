@@ -32,11 +32,7 @@
   },
   "root": {
     "level": "INFO",
-    "handlers": [
-      "console",
-      "file_info",
-      "file_error"
-    ]
+    "handlers": ["console", "file_info", "file_error"]
   },
   "loggers": {
     "elapi": {

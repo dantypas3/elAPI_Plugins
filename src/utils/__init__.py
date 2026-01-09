@@ -1,17 +1,16 @@
-from .common import strip_html, load_config, canonicalize, ensure_series
+from .common import canonicalize, ensure_series, load_config, strip_html
 from .csv_tools import CsvTools
+from .endpoints import FixedEndpoint
 from .logging_config import setup_logging
 from .validators import IDValidator
-from .endpoints import FixedEndpoint
 
 __all__ = [
-  "strip_html",
-  "load_config",
-  "canonicalize",
-  "ensure_series",
-
-  "CsvTools",
-  "setup_logging",
-
-  "FixedEndpoint",
-  "IDValidator"]
+    "strip_html",
+    "load_config",
+    "canonicalize",
+    "ensure_series",
+    "CsvTools",
+    "setup_logging",
+    "FixedEndpoint",
+    "IDValidator",
+]

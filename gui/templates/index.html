@@ -1,199 +1,207 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8">
-  <title>Export Resources</title>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body>
-<div class="container">
-  <div style="text-align: center; margin-bottom: 20px;">
-    <img src="{{ url_for('static', filename='logo.png') }}" alt="SFB1638 Logo" width="100">
-  </div>
-  <h1>Manage eLabFTW Data</h1>
-
-  <!-- Tabs -->
-  <div class="tabs">
-    <div id="btn-export" class="tab-button active">Export</div>
-    <div id="btn-import" class="tab-button">Import</div>
-  </div>
-
-  <div id="export-options" class="tab-content">
-    <div id="tab-export-res" class="sub-tab-button active">Resources</div>
-    <div id="tab-export-exp" class="sub-tab-button">Experiments</div>
-  </div>
-
-  <div id="import-options" class="tab-content" style="display:none;">
-    <div id="tab-import-res" class="sub-tab-button active">Resources</div>
-    <div id="tab-import-exp" class="sub-tab-button">Experiments</div>
-  </div>
-
-  <!-- Tab Panels -->
-  <div class="tab-panels">
-    <!-- Resources Export -->
-    <div id="content-cat" class="active">
-      <form method="post">
-        <input type="hidden" name="export_type" value="resources">
-        <label for="category">Category:</label>
-        <select name="category" id="category">
-          {% for cat in categories %}
-          <option value="{{ cat['id'] }}">{{ cat['title'] }}</option>
-          {% endfor %}
-        </select>
-
-        <label for="filename">File name (optional):</label>
-        <input type="text" id="filename" name="filename">
-
-        <button type="submit">Export Resources</button>
-      </form>
-    </div>
-
-    <!-- Experiments Export -->
-    <div id="content-exp">
-      <form method="post">
-        <input type="hidden" name="export_type" value="experiments">
-        <label for="exp_filename">File name (optional):</label>
-        <input type="text" id="exp_filename" name="exp_filename">
-        <button type="submit">Export Experiments</button>
-      </form>
-    </div>
-
-    <!-- Imports -->
-    <div id="content-imp">
-      <div class="disclaimer">
-        ⚠️ Import functionality is under development!
+  <head>
+    <meta charset="utf-8" />
+    <title>Export Resources</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+  </head>
+  <body>
+    <div class="container">
+      <div style="text-align: center; margin-bottom: 20px">
+        <img
+          src="{{ url_for('static', filename='logo.png') }}"
+          alt="SFB1638 Logo"
+          width="100"
+        />
       </div>
-      <form method="post" enctype="multipart/form-data">
-        <input type="hidden" name="export_type" value="imports">
+      <h1>Manage eLabFTW Data</h1>
 
-        <label for="import_file">Select file to upload:</label>
-        <input type="file" id="import_file" name="import_file" accept=".csv" required>
+      <!-- Tabs -->
+      <div class="tabs">
+        <div id="btn-export" class="tab-button active">Export</div>
+        <div id="btn-import" class="tab-button">Import</div>
+      </div>
 
-        <label for="imp_category">Category:</label>
-        <select name="category" id="imp_category">
-          {% for cat in categories %}
-          <option value="{{ cat['id'] }}">{{ cat['title'] }}</option>
-          {% endfor %}
-        </select>
+      <div id="export-options" class="tab-content">
+        <div id="tab-export-res" class="sub-tab-button active">Resources</div>
+        <div id="tab-export-exp" class="sub-tab-button">Experiments</div>
+      </div>
 
-        <button type="submit">Import Resources</button>
-      </form>
+      <div id="import-options" class="tab-content" style="display: none">
+        <div id="tab-import-res" class="sub-tab-button active">Resources</div>
+        <div id="tab-import-exp" class="sub-tab-button">Experiments</div>
+      </div>
+
+      <!-- Tab Panels -->
+      <div class="tab-panels">
+        <!-- Resources Export -->
+        <div id="content-cat" class="active">
+          <form method="post">
+            <input type="hidden" name="export_type" value="resources" />
+            <label for="category">Category:</label>
+            <select name="category" id="category">
+              {% for cat in categories %}
+              <option value="{{ cat['id'] }}">{{ cat['title'] }}</option>
+              {% endfor %}
+            </select>
+
+            <label for="filename">File name (optional):</label>
+            <input type="text" id="filename" name="filename" />
+
+            <button type="submit">Export Resources</button>
+          </form>
+        </div>
+
+        <!-- Experiments Export -->
+        <div id="content-exp">
+          <form method="post">
+            <input type="hidden" name="export_type" value="experiments" />
+            <label for="exp_filename">File name (optional):</label>
+            <input type="text" id="exp_filename" name="exp_filename" />
+            <button type="submit">Export Experiments</button>
+          </form>
+        </div>
+
+        <!-- Imports -->
+        <div id="content-imp">
+          <div class="disclaimer">⚠️ Import functionality is under development!</div>
+          <form method="post" enctype="multipart/form-data">
+            <input type="hidden" name="export_type" value="imports" />
+
+            <label for="import_file">Select file to upload:</label>
+            <input
+              type="file"
+              id="import_file"
+              name="import_file"
+              accept=".csv"
+              required
+            />
+
+            <label for="imp_category">Category:</label>
+            <select name="category" id="imp_category">
+              {% for cat in categories %}
+              <option value="{{ cat['id'] }}">{{ cat['title'] }}</option>
+              {% endfor %}
+            </select>
+
+            <button type="submit">Import Resources</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Flash Messages -->
+      {% with messages = get_flashed_messages(with_categories=true) %} {% if messages %}
+      <ul class="flashes">
+        {% for category, msg in messages %}
+        <li class="{{ category }}">{{ msg }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %} {% endwith %}
     </div>
-  </div>
 
-  <!-- Flash Messages -->
-  {% with messages = get_flashed_messages(with_categories=true) %}
-  {% if messages %}
-  <ul class="flashes">
-    {% for category, msg in messages %}
-    <li class="{{ category }}">{{ msg }}</li>
-    {% endfor %}
-  </ul>
-  {% endif %}
-  {% endwith %}
-</div>
+    <!-- Footer -->
+    <footer class="site-footer">
+      <p>
+        Created for:
+        <a href="https://bzh.db-engine.de/" target="_blank">
+          Heidelberg University, Biochemistry Center </a
+        >, SFB 1638
+      </p>
+      <p>
+        Built by:
+        <a href="https://github.com/dantypas3" target="_blank">D. Antypas</a>
+      </p>
+    </footer>
 
-<!-- Footer -->
-<footer class="site-footer">
-  <p>
-    Created for:
-    <a href="https://bzh.db-engine.de/" target="_blank">
-      Heidelberg University, Biochemistry Center
-    </a>, SFB 1638
-  </p>
-  <p>
-    Built by:
-    <a href="https://github.com/dantypas3" target="_blank">D. Antypas</a>
-  </p>
-</footer>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const btnExport = document.getElementById("btn-export");
+        const btnImport = document.getElementById("btn-import");
+        const exportOpts = document.getElementById("export-options");
+        const importOpts = document.getElementById("import-options");
 
-<script>
-  document.addEventListener("DOMContentLoaded", () => {
-    const btnExport = document.getElementById("btn-export");
-    const btnImport = document.getElementById("btn-import");
-    const exportOpts = document.getElementById("export-options");
-    const importOpts = document.getElementById("import-options");
+        const panels = {
+          "tab-export-res": "content-cat",
+          "tab-export-exp": "content-exp",
+          "tab-import-res": "content-imp",
+          "tab-import-exp": "content-imp", // if you later split imports, change this
+        };
 
-    const panels = {
-      "tab-export-res": "content-cat",
-      "tab-export-exp": "content-exp",
-      "tab-import-res": "content-imp",
-      "tab-import-exp": "content-imp" // if you later split imports, change this
-    };
+        // Main toggle (Export / Import)
+        btnExport.addEventListener("click", () => {
+          btnExport.classList.add("active");
+          btnImport.classList.remove("active");
+          exportOpts.style.display = "flex";
+          importOpts.style.display = "none";
 
-    // Main toggle (Export / Import)
-    btnExport.addEventListener("click", () => {
-      btnExport.classList.add("active");
-      btnImport.classList.remove("active");
-      exportOpts.style.display = "flex";
-      importOpts.style.display = "none";
+          // default show resources export
+          switchPanel("tab-export-res");
+        });
 
-      // default show resources export
-      switchPanel("tab-export-res");
-    });
+        btnImport.addEventListener("click", () => {
+          btnImport.classList.add("active");
+          btnExport.classList.remove("active");
+          exportOpts.style.display = "none";
+          importOpts.style.display = "flex";
 
-    btnImport.addEventListener("click", () => {
-      btnImport.classList.add("active");
-      btnExport.classList.remove("active");
-      exportOpts.style.display = "none";
-      importOpts.style.display = "flex";
+          // default show resources import
+          switchPanel("tab-import-res");
+        });
 
-      // default show resources import
-      switchPanel("tab-import-res");
-    });
+        // Sub-tab buttons
+        Object.keys(panels).forEach((tabId) => {
+          document.getElementById(tabId).addEventListener("click", () => {
+            switchPanel(tabId);
+          });
+        });
 
-    // Sub-tab buttons
-    Object.keys(panels).forEach(tabId => {
-      document.getElementById(tabId).addEventListener("click", () => {
-        switchPanel(tabId);
+        function switchPanel(tabId) {
+          // deactivate all sub-tabs and panels
+          Object.keys(panels).forEach((id) => {
+            document.getElementById(id).classList.remove("active");
+            document.getElementById(panels[id]).classList.remove("active");
+            document.getElementById(panels[id]).style.display = "none";
+          });
+
+          // activate selected sub-tab and panel
+          document.getElementById(tabId).classList.add("active");
+          const panelId = panels[tabId];
+          document.getElementById(panelId).classList.add("active");
+          document.getElementById(panelId).style.display = "block";
+        }
+
+        // Initialize default view
+        switchPanel("tab-export-res");
       });
-    });
+    </script>
 
-    function switchPanel(tabId) {
-      // deactivate all sub-tabs and panels
-      Object.keys(panels).forEach(id => {
-        document.getElementById(id).classList.remove("active");
-        document.getElementById(panels[id]).classList.remove("active");
-        document.getElementById(panels[id]).style.display = "none";
+    <script>
+      let isSubmitting = false;
+
+      // Mark when a form is being submitted (export/import)
+      document.querySelectorAll("form").forEach((form) => {
+        form.addEventListener("submit", () => {
+          isSubmitting = true;
+
+          // After a short delay, assume navigation is done and allow shutdown again
+          setTimeout(() => {
+            isSubmitting = false;
+          }, 3000); // 3 seconds is usually enough
+        });
       });
 
-      // activate selected sub-tab and panel
-      document.getElementById(tabId).classList.add("active");
-      const panelId = panels[tabId];
-      document.getElementById(panelId).classList.add("active");
-      document.getElementById(panelId).style.display = "block";
-    }
-
-    // Initialize default view
-    switchPanel("tab-export-res");
-  });
-</script>
-
-<script>
-  let isSubmitting = false;
-
-  // Mark when a form is being submitted (export/import)
-  document.querySelectorAll("form").forEach(form => {
-    form.addEventListener("submit", () => {
-      isSubmitting = true;
-
-      // After a short delay, assume navigation is done and allow shutdown again
-      setTimeout(() => {
-        isSubmitting = false;
-      }, 3000); // 3 seconds is usually enough
-    });
-  });
-
-  window.addEventListener("beforeunload", () => {
-    // Only shut down if we're NOT in the "just submitted a form" window
-    if (!isSubmitting) {
-      try {
-        navigator.sendBeacon("/shutdown");
-      } catch (e) {
-      }
-    }
-  });
-</script>
-</body>
+      window.addEventListener("beforeunload", () => {
+        // Only shut down if we're NOT in the "just submitted a form" window
+        if (!isSubmitting) {
+          try {
+            navigator.sendBeacon("/shutdown");
+          } catch (e) {}
+        }
+      });
+    </script>
+  </body>
 </html>
