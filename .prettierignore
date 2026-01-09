@@ -1,0 +1,19 @@
+# Python / build artifacts
+.venv/
+venv/
+__pycache__/
+*.pyc
+build/
+dist/
+*.egg-info/
+
+# Node / frontend artifacts (if present)
+node_modules/
+coverage/
+.next/
+out/
+.cache/
+
+# Data / generated outputs (customize for your project)
+*.min.js
+*.map
